@@ -155,6 +155,49 @@ Base URL: `http://localhost:7861`
 4. Manage process lifecycle (start/stop with ArtCraft)
 - Uses existing `subprocess_common` crate pattern
 
+### 🔲 Phase 5: First-Run Setup Wizard (Optional)
+1. Detect if Wan2GP is installed on first launch
+2. "Do you have Wan2GP?" → Yes: file picker/auto-scan | No: auto-install
+3. Auto-scan common paths (`F:\pinokio\api\wan.git\app`, `%LOCALAPPDATA%\wan2gp`, etc.)
+4. Auto-download + extract to default location with path override
+5. Python environment detection (conda/Pinokio)
+
+## Build Environment
+
+### Requirements
+- **Rust**: 1.88.0 (pinned via `rust-toolchain.toml`)
+- **Node**: 24+ with npm 11+
+- **CMake**: Required for `boring-sys2` (BoringSSL)
+- **NASM**: Required for `boring-sys2` assembly
+- **SQLX_OFFLINE=true**: Required for `sqlite_tasks` crate (no live DB during compile)
+
+### Known Build Issues
+- **`boring-sys2` on Windows**: Pre-existing BoringSSL build issue. The project author noted this:
+  `"NB(bt,2025-03-10): default-features = false on Windows while I debug openssl / rustls"`
+  This is NOT caused by our changes.
+- **`sqlx 0.7.4`**: Breaks with Rust 1.93+. That's why we pin to 1.88.
+
+### Build Commands
+```powershell
+# Refresh PATH after installs
+$env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User')
+
+# Check wan2gp crates (always works)
+$env:SQLX_OFFLINE = "true"
+cargo check -p wan2gp_client -p enums
+
+# Full app check (may fail on boring-sys2)
+cargo check -p artcraft
+
+# Frontend
+cd frontend && npm install && npm run dev
+```
+
+### Development Machines
+- **Work**: Windows 11 PC
+- **Home**: Windows 11 PC
+- **Laptop**: MacBook (rare)
+
 ## Critical Rules
 
 > **DO NOT modify any Wan2GP core files** (`wgp.py`, `shared/`, etc.)
@@ -179,3 +222,8 @@ Base URL: `http://localhost:7861`
 7. **`wgp_config.json`** is the ONLY wan2gp file we touched — to add our plugin to `enabled_plugins`.
 8. **Python env:** Wan2GP's python is at `F:\pinokio\api\wan.git\app\env\Scripts\python.exe`
 
+## Knowledge Base
+
+Use NotebookLM MCP for extended memory and research. See workflow: `/notebooklm-rag`
+- Config: `~/.gemini/antigravity/mcp_config.json` (NOT in repo — credentials safe)
+- Auth: Browser-based Google login (one-time per machine)
