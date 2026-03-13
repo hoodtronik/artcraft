@@ -11,6 +11,7 @@ import {
   faBomb,
   faCircleExclamation,
   faTriangleExclamation,
+  faStop,
 } from "@fortawesome/pro-solid-svg-icons";
 import { Modal } from "@storyteller/ui-modal";
 import {
@@ -24,6 +25,7 @@ import {
   GetTaskQueue,
   MarkTaskAsDismissed,
   TasksNukeAll,
+  cancelWan2gpTask,
 } from "@storyteller/tauri-api";
 import type { TaskQueueItem } from "@storyteller/tauri-api";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
@@ -57,6 +59,8 @@ type InProgressTask = {
   canDismiss?: boolean;
   estimatedTimeLeftMs?: number;
   modelType?: string;
+  isLocal?: boolean;
+  providerJobId?: string;
 };
 
 type CompletedTask = {
@@ -96,9 +100,11 @@ const formatTimeLeft = (ms: number): string => {
 const InProgressCard = ({
   task,
   onDismiss,
+  onCancel,
 }: {
   task: InProgressTask;
   onDismiss?: () => void;
+  onCancel?: () => void;
 }) => {
   const progressPercent = Math.max(0, Math.min(100, Math.round(task.progress)));
   const isAlmostDone = task.progress >= 95;
@@ -161,17 +167,34 @@ const InProgressCard = ({
             <div className="mt-1 text-xs text-base-fg/50">{timeLabel}</div>
           )}
         </div>
-        {onDismiss && (
-          <button
-            className="ml-auto h-6 w-6 rounded-full p-1 text-base-fg/60 hover:bg-ui-controls"
-            aria-label="Dismiss"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDismiss();
-            }}
-          >
-            <FontAwesomeIcon icon={faXmark} />
-          </button>
+        {(onCancel || onDismiss) && (
+          <div className="ml-auto flex items-center gap-1">
+            {onCancel && (
+              <button
+                className="flex h-7 items-center gap-1 rounded-md bg-red-500/10 px-2 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/20"
+                aria-label="Stop generation"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCancel();
+                }}
+              >
+                <FontAwesomeIcon icon={faStop} className="h-2.5 w-2.5" />
+                Stop
+              </button>
+            )}
+            {onDismiss && (
+              <button
+                className="h-6 w-6 rounded-full p-1 text-base-fg/60 hover:bg-ui-controls"
+                aria-label="Dismiss"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDismiss();
+                }}
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -527,16 +550,19 @@ export const TaskQueue = () => {
             const elapsed = now - createdMs;
             const estimatedTimeLeftMs = Math.max(0, duration - elapsed);
             const parts = formatTitleParts(t);
-            const canDismiss = now - createdMs > 5 * 60 * 1000; // 5 minutes
+            const isLocal = String(t.provider || "").toLowerCase() === "wan2gp";
+            const canDismiss = !isLocal && (now - createdMs > 5 * 60 * 1000); // 5 minutes, not for local tasks
             return {
               id: t.id,
               title: `Generating ${parts.kind || "Task"}...`,
-              subtitle: parts.subtitle,
+              subtitle: isLocal ? `${parts.subtitle || ""} · Local GPU`.replace(/^ · /, "") : parts.subtitle,
               progress,
               updatedAt: t.updated_at,
               canDismiss,
               estimatedTimeLeftMs,
               modelType: t.model_type ? String(t.model_type) : undefined,
+              isLocal,
+              providerJobId: t.provider_job_id,
             };
           });
 
@@ -823,6 +849,16 @@ export const TaskQueue = () => {
                                     ? () => dismissTask(t.id)
                                     : undefined
                                 }
+                                onCancel={
+                                  t.isLocal && t.providerJobId
+                                    ? async () => {
+                                        try {
+                                          await cancelWan2gpTask(t.providerJobId!);
+                                        } catch (_) { /* ignore */ }
+                                        dismissTask(t.id);
+                                      }
+                                    : undefined
+                                }
                               />
                             ))}
                           </div>
@@ -992,6 +1028,16 @@ export const TaskQueue = () => {
                         task={t}
                         onDismiss={
                           t.canDismiss ? () => dismissTask(t.id) : undefined
+                        }
+                        onCancel={
+                          t.isLocal && t.providerJobId
+                            ? async () => {
+                                try {
+                                  await cancelWan2gpTask(t.providerJobId!);
+                                } catch (_) { /* ignore */ }
+                                dismissTask(t.id);
+                              }
+                            : undefined
                         }
                       />
                     ))}

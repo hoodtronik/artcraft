@@ -65,3 +65,16 @@ export const getWan2gpStatus = async (): Promise<Wan2gpStatus> => {
 export const getWan2gpModels = async (): Promise<Wan2gpModelsResponse> => {
   return (await invoke("wan2gp_get_models_command")) as Wan2gpModelsResponse;
 };
+
+export interface Wan2gpCancelResponse {
+  success: boolean;
+  message: string | null;
+}
+
+export const cancelWan2gpTask = async (
+  taskId: string,
+): Promise<Wan2gpCancelResponse> => {
+  return (await invoke("wan2gp_cancel_task_command", {
+    taskId,
+  })) as Wan2gpCancelResponse;
+};
