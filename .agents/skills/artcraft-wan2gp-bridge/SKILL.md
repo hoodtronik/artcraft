@@ -116,37 +116,54 @@ Base URL: `http://localhost:7861`
 1. ✅ Add `Wan2gp` to `GenerationProvider` enum (+ all match arms, tests)
 2. ✅ Add `Wan2gp` to `GenerationServiceProvider` (frontend events)
 3. ✅ Create `wan2gp_client` crate in `crates/api_clients/` (reqwest HTTP client)
-4. ✅ Add Wan2GP handler in `image_to_video` enqueue command
-5. ✅ Wire up `Wan2gp` in `handle_request()` dispatcher
-6. ✅ Add wan2gp_client dependency to desktop app crate
-7. ✅ Create `Wan2gpSettings` state (bridge URL, model, params)
-8. ✅ Create `wan2gp` service module
+4. ✅ Add Wan2GP handler for video (`handle_wan2gp_video`)
+5. ✅ Add Wan2GP handler for image (`handle_wan2gp_image`)
+6. ✅ Wire up `Wan2gp` in dispatchers (both video + image)
+7. ✅ Add wan2gp_client dependency to desktop app crate
+8. ✅ Create `Wan2gpSettings` state (bridge URL, model, params)
+9. ✅ Create `wan2gp` service module
+10. ✅ Cancel task command (`wan2gp_cancel_task_command`)
+11. ✅ Resolution mapping (aspect ratio → WxH for both video and image)
 
 #### ArtCraft Rust Architecture Notes
-- Each provider has its own handler module under `image_to_video/{provider}/`
+- Each provider has its own handler module under `image_to_video/{provider}/` or `text_to_image/{provider}/`
 - Handlers return `Result<TaskEnqueueSuccess, GenerateError>`
 - `TaskEnqueueSuccess` records task type, model, provider, and provider_job_id
-- The `enqueue_image_to_video_command.rs` dispatcher selects provider based on model + request
+- The enqueue dispatchers select provider based on model + request
 - `GenerationProvider` enum has 16-char max serialized length (for MySQL/sqlite)
 - Use `reqwest.workspace = true` for HTTP (not wreq — that's for anti-fingerprinting)
+- When adding a new model variant (e.g. `Wan2gpLocal`), update ALL exhaustive match arms
+  - The model-to-model_type mapping functions (e.g. `text_to_image_model_to_model_type`)
+  - The artcraft handler's exhaustive match (e.g. `handle_text_to_image_artcraft`)
 
 ### ✅ Phase 3: ArtCraft Frontend (Complete)
 1. ✅ Add `Wan2gp` to frontend `GenerationProvider` enum
 2. ✅ Add `Wan2GP` to `ModelCreator` enum
 3. ✅ Add "Local (Wan2GP)" video model entry in model selector
 4. ✅ Wan2GP settings block (bridge URL, model picker from API)
-5. ✅ 4 Tauri commands (get/update settings, get status, get models)
+5. ✅ 5 Tauri commands (get/update settings, get status, get models, cancel task)
 6. ✅ TypeScript API wrappers in `@storyteller/tauri-api`
 7. ✅ Wan2gpAccountBlock with status, GPU info, model browser
+8. ✅ Cloud/Local toggle on ALL three pages (Video, Image, Edit)
+9. ✅ Stop button for local Wan2GP tasks in TaskQueue
+10. ✅ Text-to-image local enqueue pipeline (wan2gp_local model + wan2gp_model_id)
 
 #### Frontend Architecture Notes
 - Frontend uses TailwindCSS (note: can check with `twMerge`)
 - Models are defined in `libs/model-list/src/lib/lists/VideoModels.ts`
 - Each model has `id`, `tauriId` (sent to Rust), `providers[]`, `creator`
 - Model selector is `ClassyModelSelector` component from `@storyteller/ui-model-selector`
+  - `showLocalToggle` prop enables Cloud/Local toggle
+  - `localModelCategory` prop (`"video"` | `"image"`) tells `useWan2gpLocalModels` which type to fetch
 - Provider enum must match Rust serialization exactly (`snake_case`)
 - Tauri commands follow pattern: Rust command → TypeScript invoke wrapper → React component
 - Account blocks go in `libs/components/settings-modal/src/lib/panes/AccountSettings/`
+- When adding Wan2GP support to a new page:
+  1. Add `showLocalToggle` + `localModelCategory` to the page's `ClassyModelSelector`
+  2. Add Wan2GP detection + `wan2gp_model_id` field to the page's Enqueue TS function
+  3. Add `Wan2gpLocal` variant to the Rust model enum
+  4. Thread `Wan2gpSettings` through the command chain
+  5. Create handler module under `{page_type}/wan2gp/`
 
 ### 🔲 Phase 4: Auto-Launch (Optional)
 1. Detect bridge offline when Wan2GP provider selected
@@ -220,6 +237,11 @@ cd frontend; npm install; npm run dev
 6. **Single GPU:** Only one generation can run at a time. The bridge queues tasks sequentially.
 7. **`wgp_config.json`** is the ONLY wan2gp file we touched — to add our plugin to `enabled_plugins`.
 8. **Python env:** Wan2GP's python is at `F:\pinokio\api\wan.git\app\env\Scripts\python.exe`
+9. **CommonAspectRatio import path:** In `handle_wan2gp_video.rs`, use `artcraft_router::api::common_aspect_ratio::CommonAspectRatio`. In `handle_wan2gp_image.rs`, use `crate::core::api_adapters::aspect_ratio::common_aspect_ratio::CommonAspectRatio`. The video request's aspect ratio comes from the `artcraft_router` crate, while the image request's comes from the local adapter.
+10. **Exhaustive match arms:** When adding a new model variant (like `Wan2gpLocal`), you must update ALL exhaustive matches:
+    - The model-to-model_type mapping
+    - The artcraft handler's match on model variants
+    - The provider routing logic
 
 ## Knowledge Base
 
@@ -227,31 +249,34 @@ Use NotebookLM MCP for extended memory and research. See workflow: `/notebooklm-
 - Config: `~/.gemini/antigravity/mcp_config.json` (NOT in repo — credentials safe)
 - Auth: Browser-based Google login (one-time per machine)
 
-## Implementation Status (as of 2026-03-13)
+## Implementation Status (as of 2026-03-13 15:30 ET)
 
 ### ✅ Working
 - **Wan2GP provider enum** added throughout frontend + backend
 - **Bridge plugin API** — all endpoints operational (status, models, generate, tasks, cancel)
 - **Model discovery** — Wan2GP reports 75 video + 5 image models
-- **Cloud/Local toggle** — UI toggle on video page to switch between cloud and local
+- **Cloud/Local toggle** — UI toggle on ALL 3 pages (Video, Image, Edit)
+   - Uses `localModelCategory` prop: `"video"` for video page, `"image"` for image/edit pages
 - **Local model selector** — fetches real model list from bridge, displayed in dropdown
-- **Task submission** — ArtCraft sends generate request, bridge accepts + returns task_id
+- **Task submission (Video)** — ArtCraft sends generate request, bridge accepts + returns task_id
+- **Task submission (Image)** — Full text-to-image Wan2GP pipeline working
 - **Wan2GP renders** — bridge calls `process_tasks_cli()`, output appears in output folder
 - **Wan2GP settings panel** in Account Settings pane
 - **Task polling thread** (`wan2gp_task_polling_thread`) — polls bridge for task status
+- **Cancel/Stop button** — red Stop button on in-progress local tasks in TaskQueue
+- **Resolution mapping** — ArtCraft aspect ratios mapped to concrete WxH strings for both video and image
 
 ### 🔧 In Progress
 - **Result download** — polling thread downloads completed result back to ArtCraft temp
 - **Task completion propagation** — marking tasks as done, emitting frontend events
+- **Image Edit pipeline** — toggle is on page but backend handler not yet created
+  - Edit models: Flux 2 Klein, Flux 2 Dev, Qwen edit models
 
 ### ❌ Not Yet Implemented
-- **Resolution mapping** — ArtCraft picks "720p" but bridge gets wrong resolution
-  - TronikSlate uses: cinematic=832x480, vertical=480x832, square=624x624
-  - Need to map ArtCraft's aspect ratio picker → Wan2GP resolution string
-- **Progress UI indicator** — no progress bar or stop button in ArtCraft during render
-- **Cancel support** — client has `cancel_task()` but no UI button yet
+- **Dynamic resolution matching** — query bridge for available resolutions, find closest match (user has custom 720p=1920x1088, etc.)
 - **Speed profiles** — auto-select fastest profile (TronikSlate has `_get_fastest_profile()`)
 - **LTX frame math** — need `snap_to_8n1()` for LTX models (frames must be 8n+1)
+- **Image Edit Wan2GP handler** — need `handle_wan2gp_image_edit` handler + `Wan2gpLocal` in edit model enum
 
 ### Key File Locations (ArtCraft side)
 | What | Where |
@@ -261,13 +286,21 @@ Use NotebookLM MCP for extended memory and research. See workflow: `/notebooklm-
 | Model selector store | `frontend/libs/components/model-selector/src/lib/classy-model-selector-store.ts` |
 | Provider icons | `frontend/libs/components/model-selector/src/lib/provider-icons.tsx` |
 | Wan2GP API (frontend) | `frontend/libs/tauri-api/src/lib/wan2gp/Wan2gpApi.ts` |
-| Enqueue request builder | `frontend/libs/tauri-api/src/lib/enqueue/EnqueueImageToVideo.ts` |
+| Video enqueue builder | `frontend/libs/tauri-api/src/lib/enqueue/EnqueueImageToVideo.ts` |
+| Image enqueue builder | `frontend/libs/tauri-api/src/lib/enqueue/EnqueueTextToImage.ts` |
 | VideoModel enum (backend) | `crates/desktop/artcraft/src/core/commands/enqueue/image_to_video/enqueue_image_to_video_command.rs` |
+| TextToImageModel enum (backend) | `crates/desktop/artcraft/src/core/commands/enqueue/text_to_image/enqueue_text_to_image_command.rs` |
 | Wan2GP video handler | `crates/desktop/artcraft/src/core/commands/enqueue/image_to_video/wan2gp/handle_wan2gp_video.rs` |
+| Wan2GP image handler | `crates/desktop/artcraft/src/core/commands/enqueue/text_to_image/wan2gp/handle_wan2gp_image.rs` |
+| Wan2GP cancel command | `crates/desktop/artcraft/src/services/wan2gp/commands/wan2gp_cancel_task_command.rs` |
 | Wan2GP polling thread | `crates/desktop/artcraft/src/services/wan2gp/threads/wan2gp_task_polling/wan2gp_task_polling_thread.rs` |
 | Wan2GP Rust client | `crates/api_clients/wan2gp_client/src/client.rs` |
 | Wan2GP settings state | `crates/desktop/artcraft/src/services/wan2gp/state/wan2gp_settings.rs` |
 | Startup (spawns threads) | `crates/desktop/artcraft/src/core/lifecycle/startup/handle_tauri_startup.rs` |
+| Task Queue UI | `frontend/apps/artcraft/app/src/components/signaled/TopBar/TaskQueue.tsx` |
+| Text-to-Image page | `frontend/apps/artcraft/app/src/pages/PageImage/TextToImage.tsx` |
+| Image Edit page | `frontend/apps/artcraft/app/src/pages/PageEdit/PageEdit.tsx` |
+| Video page | `frontend/apps/artcraft/app/src/pages/PageVideo/ImageToVideo.tsx` |
 | Dev launcher (.bat) | `start-dev.bat` |
 
 ### Dev Commands (Quick Reference)
