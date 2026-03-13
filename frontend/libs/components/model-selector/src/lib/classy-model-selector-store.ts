@@ -6,18 +6,21 @@ import { GenerationProvider } from "@storyteller/api-enums";
 interface ClassyModelSelectorState {
   selectedModels: { [page in ModelPage]?: Model };
   selectedProviders: { [page in ModelPage]?: { [modelId: string]: GenerationProvider } };
+  isLocalMode: boolean;
   setSelectedModel: (page: ModelPage, model: Model) => void;
   setSelectedProvider: (
     page: ModelPage,
     modelId: string,
     provider: GenerationProvider
   ) => void;
+  setLocalMode: (enabled: boolean) => void;
 }
 
 export const useClassyModelSelectorStore = create<ClassyModelSelectorState>(
   (set) => ({
     selectedModels: {},
     selectedProviders: {},
+    isLocalMode: false,
     setSelectedModel: (page, model) =>
       set((state) => ({
         selectedModels: {
@@ -34,6 +37,10 @@ export const useClassyModelSelectorStore = create<ClassyModelSelectorState>(
             [modelId]: provider,
           },
         },
+      })),
+    setLocalMode: (enabled) =>
+      set(() => ({
+        isLocalMode: enabled,
       })),
   })
 );

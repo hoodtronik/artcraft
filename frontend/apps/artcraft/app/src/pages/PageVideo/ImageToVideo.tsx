@@ -227,6 +227,7 @@ const ImageToVideo = ({ imageMediaId, imageUrl }: ImageToVideoProps) => {
               buttonClassName="bg-transparent p-0 text-lg hover:bg-transparent text-white/80 hover:text-white"
               showIconsInList
               triggerLabel="Model"
+              showLocalToggle
             />
           </div>
           <div className="absolute bottom-6 right-6 z-20 flex items-center gap-2">

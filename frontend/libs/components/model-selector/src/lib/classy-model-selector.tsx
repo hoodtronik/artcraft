@@ -9,9 +9,10 @@ import { Provider } from "@storyteller/tauri-api";
 import { getProviderDisplayName, getProviderIcon } from "./provider-icons";
 import { Model } from "@storyteller/model-list";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleCheck, faChevronUp } from "@fortawesome/pro-solid-svg-icons";
+import { faCircleCheck, faChevronUp, faCloud, faDesktop } from "@fortawesome/pro-solid-svg-icons";
 import { GenerationProvider } from "@storyteller/api-enums";
 import { defaultModelForPage } from "./defaultModelForPage";
+import { useWan2gpLocalModels } from "./use-wan2gp-local-models";
 
 interface ClassyModelSelectorProps {
   items: Omit<PopoverItem, "selected">[];
@@ -25,6 +26,7 @@ interface ClassyModelSelectorProps {
   providersByModel?: Partial<Record<string, Provider[]>>;
   providerTooltipDelayMs?: number;
   maxListHeight?: number | string;
+  showLocalToggle?: boolean;
 }
 
 const DEFAULT_PROVIDER_OPTIONS: GenerationProvider[] = [GenerationProvider.Artcraft];
@@ -103,9 +105,10 @@ export function ClassyModelSelector({
   providersByModel,
   providerTooltipDelayMs = 300,
   maxListHeight = "60vh",
+  showLocalToggle = false,
   ...popoverProps
 }: ClassyModelSelectorProps) {
-  const { selectedModels, setSelectedModel, setSelectedProvider } =
+  const { selectedModels, setSelectedModel, setSelectedProvider, isLocalMode, setLocalMode } =
     useClassyModelSelectorStore();
   const itemModels: Model[] = items
     .map(item => item.model)
@@ -116,17 +119,25 @@ export function ClassyModelSelector({
     (s) => s.selectedProviders[page] ?? {},
   );
 
-  // For the first mount, make sure the selected model is set for other components to listen
+  // Fetch local Wan2GP models when in local mode
+  const { models: localModelItems } = useWan2gpLocalModels();
+
+  // Choose items based on mode
+  const activeItems = (showLocalToggle && isLocalMode) ? localModelItems : items;
+
+  // Initialize selected model if not set
   useEffect(() => {
-    // Initialize selected model if not set
-    if (!selectedModels[page] && items[0]) {
+    if (!selectedModels[page] && activeItems[0]) {
+      const itemModels: Model[] = activeItems
+        .map(item => item.model)
+        .filter(model => model !== undefined);
       setSelectedModel(page, defaultModelForPage(itemModels, page));
     }
-  }, []);
+  }, [isLocalMode]);
 
-  // Initialize a default provider for each model so we can render icons even when not selected
+  // Initialize a default provider for each model
   useEffect(() => {
-    for (const item of items) {
+    for (const item of activeItems) {
       const modelId = item.model?.id;
       if (!modelId) continue;
       if (selectedProvidersByModel[modelId]) continue;
@@ -135,8 +146,7 @@ export function ClassyModelSelector({
         setSelectedProvider(page, modelId, allowed[0]);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, providersByModel, page, selectedProvidersByModel]);
+  }, [activeItems, providersByModel, page, selectedProvidersByModel]);
 
   const handleModelSelect = (item: PopoverItem) => {
     console.log(`Model selector changed on page "${page}": `, item.model);
@@ -145,7 +155,7 @@ export function ClassyModelSelector({
 
   const modelList = useMemo(
     () =>
-      items.map((item) => {
+      activeItems.map((item) => {
         const modelId = item.model?.id;
         const allowedProviders = item.model?.getProviders() || DEFAULT_PROVIDER_OPTIONS;
 
@@ -196,7 +206,7 @@ export function ClassyModelSelector({
         } as PopoverItem;
       }),
     [
-      items,
+      activeItems,
       selectedModel,
       selectedProvider,
       selectedProvidersByModel,
@@ -208,6 +218,34 @@ export function ClassyModelSelector({
 
   return (
     <div className="flex items-center gap-3">
+      {showLocalToggle && (
+        <div className="flex items-center bg-ui-controls/60 rounded-lg border border-ui-controls-border overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setLocalMode(false)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-all ${
+              !isLocalMode
+                ? "bg-primary/80 text-white shadow-sm"
+                : "text-base-fg/60 hover:text-base-fg/80 hover:bg-ui-controls/40"
+            }`}
+          >
+            <FontAwesomeIcon icon={faCloud} className="text-xs" />
+            Cloud
+          </button>
+          <button
+            type="button"
+            onClick={() => setLocalMode(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium transition-all ${
+              isLocalMode
+                ? "bg-emerald-600/80 text-white shadow-sm"
+                : "text-base-fg/60 hover:text-base-fg/80 hover:bg-ui-controls/40"
+            }`}
+          >
+            <FontAwesomeIcon icon={faDesktop} className="text-xs" />
+            Local
+          </button>
+        </div>
+      )}
       <span className="text-base-fg/90 text-base font-semibold">Model</span>
       <PopoverMenu
         items={modelList}
