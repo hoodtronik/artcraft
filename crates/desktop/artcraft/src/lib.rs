@@ -70,6 +70,11 @@ use crate::services::worldlabs::commands::worldlabs_open_login_command::worldlab
 use crate::services::worldlabs::commands::worldlabs_receive_bearer_command::worldlabs_receive_bearer_command;
 use crate::services::worldlabs::state::worldlabs_bearer_bridge::WorldlabsBearerBridge;
 use crate::services::worldlabs::state::worldlabs_credential_manager::WorldlabsCredentialManager;
+use crate::services::wan2gp::commands::wan2gp_get_settings_command::wan2gp_get_settings_command;
+use crate::services::wan2gp::commands::wan2gp_update_settings_command::wan2gp_update_settings_command;
+use crate::services::wan2gp::commands::wan2gp_get_status_command::wan2gp_get_status_command;
+use crate::services::wan2gp::commands::wan2gp_get_models_command::wan2gp_get_models_command;
+use crate::services::wan2gp::state::wan2gp_settings::Wan2gpSettings;
 use log::error;
 
 use crate::core::state::artcraft_usage_tracker::artcraft_usage_tracker::ArtcraftUsageTracker;
@@ -132,6 +137,8 @@ pub fn run() {
   
   let artcraft_usage_tracker = ArtcraftUsageTracker::new();
   let artcraft_usage_tracker_2 = artcraft_usage_tracker.clone();
+
+  let wan2gp_settings = Wan2gpSettings::new();
 
   println!("Initializing backend runtime...");
 
@@ -198,7 +205,8 @@ pub fn run() {
     .manage(sora_task_queue)
     .manage(storyteller_creds_manager_3)
     .manage(worldlabs_bearer_bridge)
-    .manage(worldlabs_creds_manager);
+    .manage(worldlabs_creds_manager)
+    .manage(wan2gp_settings);
 
   // TODO: Break this out into another module, because RustRover/IntelliJ lags with these macros.
   //  My first attempt at naively doing this didn't work because the macros can't find their codegen'd targets.
@@ -251,6 +259,10 @@ pub fn run() {
     worldlabs_get_credential_info_command,
     worldlabs_open_login_command,
     worldlabs_receive_bearer_command,
+    wan2gp_get_settings_command,
+    wan2gp_update_settings_command,
+    wan2gp_get_status_command,
+    wan2gp_get_models_command,
   ]);
 
   builder.run(tauri::generate_context!("tauri.conf.json"))

@@ -130,11 +130,20 @@ Base URL: `http://localhost:7861`
 - `GenerationProvider` enum has 16-char max serialized length (for MySQL/sqlite)
 - Use `reqwest.workspace = true` for HTTP (not wreq — that's for anti-fingerprinting)
 
-### 🔲 Phase 3: ArtCraft Frontend (Not Started)
-1. Add "Local (Wan2GP)" provider option in model picker
-2. Fetch and display models from bridge API
-3. Settings page for bridge URL configuration
-4. Progress display from task polling
+### 🟡 Phase 3: ArtCraft Frontend (In Progress)
+1. ✅ Add `Wan2gp` to frontend `GenerationProvider` enum
+2. ✅ Add `Wan2GP` to `ModelCreator` enum
+3. ✅ Add "Local (Wan2GP)" video model entry in model selector
+4. 🔲 Wan2GP settings page (bridge URL, model picker from API)
+5. 🔲 Dynamic model list from bridge API (`GET /artcraft/api/models`)
+6. 🔲 Progress display from task polling
+
+#### Frontend Architecture Notes
+- Frontend uses TailwindCSS (note: can check with `twMerge`)
+- Models are defined in `libs/model-list/src/lib/lists/VideoModels.ts`
+- Each model has `id`, `tauriId` (sent to Rust), `providers[]`, `creator`
+- Model selector is `ClassyModelSelector` component from `@storyteller/ui-model-selector`
+- Provider enum must match Rust serialization exactly (`snake_case`)
 
 ## Critical Rules
 
