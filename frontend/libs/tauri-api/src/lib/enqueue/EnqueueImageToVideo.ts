@@ -70,6 +70,7 @@ interface RawEnqueueImageToVideoRequest {
   aspect_ratio?: string; // TODO: Typesafety.
   duration_seconds?: number;
   reference_image_media_tokens?: string[];
+  wan2gp_model_id?: string;
 }
 
 export interface EnqueueImageToVideoError extends CommandResult {
@@ -90,10 +91,18 @@ export type EnqueueImageToVideoResult =
 export const EnqueueImageToVideo = async (
   request: EnqueueImageToVideoRequest,
 ): Promise<EnqueueImageToVideoResult> => {
+  const modelTauriId = request.model?.tauriId;
+  const isWan2gpLocal = modelTauriId?.startsWith("wan2gp_");
+
   const mutableRequest: RawEnqueueImageToVideoRequest = {
-    model: request.model?.tauriId,
+    model: isWan2gpLocal ? "wan2gp_local" : modelTauriId,
     image_media_token: request.image_media_token,
   };
+
+  // Pass the actual Wan2GP model ID (strip the "wan2gp_" prefix)
+  if (isWan2gpLocal && modelTauriId) {
+    mutableRequest.wan2gp_model_id = modelTauriId.replace(/^wan2gp_/, "");
+  }
 
   if (request.provider) {
     mutableRequest.provider = request.provider;

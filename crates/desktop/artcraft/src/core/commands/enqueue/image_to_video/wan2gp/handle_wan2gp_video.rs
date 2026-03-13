@@ -38,10 +38,13 @@ pub async fn handle_wan2gp_video(
 
   info!("Wan2GP bridge online: engine={}, gpu={}", status.engine, status.gpu);
 
-  // Determine the model to use.
-  let wan2gp_model = wan2gp_settings.selected_model().ok_or_else(|| {
-    GenerateError::AnyhowError(anyhow!("No Wan2GP model selected. Please select a model in the Wan2GP settings."))
-  })?;
+  // Determine the model: prefer the request's model ID (from the Local mode selector),
+  // fall back to the global selected_model in settings.
+  let wan2gp_model = request.wan2gp_model_id.clone()
+    .or_else(|| wan2gp_settings.selected_model())
+    .ok_or_else(|| {
+      GenerateError::AnyhowError(anyhow!("No Wan2GP model selected. Pick a model from the Local mode selector or configure one in Wan2GP settings."))
+    })?;
 
   let b64_engine = base64::engine::general_purpose::STANDARD;
 

@@ -90,6 +90,11 @@ pub enum VideoModel {
 
   #[serde(rename = "veo_3p1_fast")]
   Veo3p1Fast,
+
+  /// Catch-all for any Wan2GP local model.
+  /// The specific model ID is passed via `wan2gp_model_id` on the request.
+  #[serde(rename = "wan2gp_local")]
+  Wan2gpLocal,
 }
 
 #[derive(Deserialize, Debug)]
@@ -159,6 +164,11 @@ pub struct EnqueueImageToVideoRequest {
   /// A frontend-defined payload that we'll send back to the frontend
   /// as a Tauri event on task completion.
   pub frontend_subscriber_payload: Option<String>,
+
+  /// OPTIONAL.
+  /// The specific Wan2GP model ID (e.g. "ltx_2_3_distilled", "wan2_1_14b_i2v").
+  /// Only used when model = wan2gp_local.
+  pub wan2gp_model_id: Option<String>,
 }
 
 // TODO: Not sure how to handle so many different types of video (model) x (services).
@@ -316,6 +326,7 @@ pub async fn handle_request(
 
   let provider = match (model, request.provider) {
     (VideoModel::GrokVideo, _) => GenerationProvider::Grok,
+    (VideoModel::Wan2gpLocal, _) => GenerationProvider::Wan2gp,
     _ => request.provider.unwrap_or(GenerationProvider::Artcraft),
   };
 
