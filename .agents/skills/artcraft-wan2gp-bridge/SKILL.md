@@ -167,30 +167,29 @@ Base URL: `http://localhost:7861`
 ### Requirements
 - **Rust**: 1.88.0 (pinned via `rust-toolchain.toml`)
 - **Node**: 24+ with npm 11+
-- **CMake**: Required for `boring-sys2` (BoringSSL)
-- **NASM**: Required for `boring-sys2` assembly
+- **CMake**: Required for `boring-sys2` (BoringSSL) — `winget install Kitware.CMake`
+- **NASM**: Required for `boring-sys2` assembly — `winget install NASM.NASM`
+- **LIBCLANG_PATH**: Must point to Visual Studio's LLVM — see build commands
 - **SQLX_OFFLINE=true**: Required for `sqlite_tasks` crate (no live DB during compile)
 
-### Known Build Issues
-- **`boring-sys2` on Windows**: Pre-existing BoringSSL build issue. The project author noted this:
-  `"NB(bt,2025-03-10): default-features = false on Windows while I debug openssl / rustls"`
-  This is NOT caused by our changes.
+### Known Build Issues (RESOLVED)
+- **`boring-sys2` on Windows**: Fixed! Needs `LIBCLANG_PATH` set to VS 2022's LLVM bin dir.
 - **`sqlx 0.7.4`**: Breaks with Rust 1.93+. That's why we pin to 1.88.
 
-### Build Commands
+### Build Commands (Verified Working ✅)
 ```powershell
 # Refresh PATH after installs
-$env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User')
+$env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User') + ';C:\Program Files\NASM'
 
-# Check wan2gp crates (always works)
+# Required env vars
 $env:SQLX_OFFLINE = "true"
-cargo check -p wan2gp_client -p enums
+$env:LIBCLANG_PATH = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin"
 
-# Full app check (may fail on boring-sys2)
-cargo check -p artcraft
+# Full app build (WORKS!)
+cargo build -p artcraft
 
 # Frontend
-cd frontend && npm install && npm run dev
+cd frontend; npm install; npm run dev
 ```
 
 ### Development Machines
