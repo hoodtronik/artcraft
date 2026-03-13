@@ -1,0 +1,202 @@
+use crate::core::events::basic_sendable_event_trait::BasicSendableEvent;
+use crate::core::events::generation_events::common::{GenerationAction, GenerationServiceProvider};
+use crate::core::events::generation_events::generation_complete_event::GenerationCompleteEvent;
+use crate::core::state::data_dir::app_data_root::AppDataRoot;
+use crate::core::state::data_dir::trait_data_subdir::DataSubdir;
+use crate::core::state::task_database::TaskDatabase;
+use crate::core::utils::task_database_pending_statuses::TASK_DATABASE_PENDING_STATUSES;
+use crate::services::wan2gp::state::wan2gp_settings::Wan2gpSettings;
+use enums::common::generation_provider::GenerationProvider;
+use enums::tauri::tasks::task_media_file_class::TaskMediaFileClass;
+use enums::tauri::tasks::task_status::TaskStatus;
+use log::{error, info, warn};
+use sqlite_tasks::queries::list_tasks_by_provider_and_status::{
+  list_tasks_by_provider_and_status, ListTasksByProviderAndStatusArgs,
+};
+use sqlite_tasks::queries::update_successful_task_status_with_metadata::{
+  update_successful_task_status_with_metadata, UpdateSuccessfulTaskArgs,
+};
+use sqlite_tasks::queries::update_task_status::{update_task_status, UpdateTaskArgs};
+use tauri::AppHandle;
+use wan2gp_client::client::Wan2gpClient;
+
+/// Background thread that polls the Wan2GP bridge for task completion.
+///
+/// Unlike cloud providers, Wan2GP tasks are local — no credentials needed,
+/// just check the bridge API for status and download results.
+pub async fn wan2gp_task_polling_thread(
+  app_handle: AppHandle,
+  app_data_root: AppDataRoot,
+  task_database: TaskDatabase,
+  wan2gp_settings: Wan2gpSettings,
+) -> ! {
+  info!("[Wan2GP Polling] Starting task polling thread...");
+
+  loop {
+    let res = polling_loop(
+      &app_handle,
+      &app_data_root,
+      &task_database,
+      &wan2gp_settings,
+    )
+    .await;
+    if let Err(err) = res {
+      error!("[Wan2GP Polling] Error: {:?}", err);
+    }
+    // Sleep before next cycle
+    tokio::time::sleep(std::time::Duration::from_millis(5_000)).await;
+  }
+}
+
+async fn polling_loop(
+  app_handle: &AppHandle,
+  app_data_root: &AppDataRoot,
+  task_database: &TaskDatabase,
+  wan2gp_settings: &Wan2gpSettings,
+) -> Result<(), anyhow::Error> {
+  // Find all pending Wan2GP tasks
+  let local_tasks = list_tasks_by_provider_and_status(ListTasksByProviderAndStatusArgs {
+    db: task_database.get_connection(),
+    provider: GenerationProvider::Wan2gp,
+    task_statuses: &TASK_DATABASE_PENDING_STATUSES,
+  })
+  .await?;
+
+  let tasks = local_tasks.tasks;
+  if tasks.is_empty() {
+    return Ok(());
+  }
+
+  info!("[Wan2GP Polling] {} pending tasks", tasks.len());
+
+  let bridge_url = wan2gp_settings.bridge_url();
+  let client = Wan2gpClient::with_base_url(&bridge_url);
+
+  for task in tasks.iter() {
+    let task_id_str = match &task.provider_job_id {
+      Some(id) => id.clone(),
+      None => {
+        warn!("[Wan2GP Polling] Task {} has no provider_job_id, skipping", task.id);
+        continue;
+      }
+    };
+
+    // Poll the bridge for this task's status
+    let status = match client.poll_task(&task_id_str).await {
+      Ok(s) => s,
+      Err(e) => {
+        warn!("[Wan2GP Polling] Failed to get status for task {}: {}", task_id_str, e);
+        continue;
+      }
+    };
+
+    match status.status.as_str() {
+      "complete" => {
+        info!("[Wan2GP Polling] Task {} complete!", task_id_str);
+
+        // Download the result from the bridge
+        let result_path = match client.download_result(&task_id_str).await {
+          Ok(bytes) => {
+            let ext = if status.result_type.as_deref() == Some("image") {
+              "png"
+            } else {
+              "mp4"
+            };
+            let filename = format!("wan2gp_{}.{}", task_id_str, ext);
+            let temp_dir = app_data_root.temp_dir().path();
+            let dest = temp_dir.join(&filename);
+
+            if let Err(e) = tokio::fs::write(&dest, &bytes).await {
+              error!("[Wan2GP Polling] Failed to write result file: {}", e);
+              None
+            } else {
+              info!("[Wan2GP Polling] Downloaded result to: {:?} ({} bytes)", dest, bytes.len());
+              Some(dest)
+            }
+          }
+          Err(e) => {
+            warn!("[Wan2GP Polling] Failed to download result for {}: {}", task_id_str, e);
+            None
+          }
+        };
+
+        // For local files, use a file:// URL so the frontend can display them
+        let maybe_cdn_url = result_path.as_ref().map(|p| {
+          format!("file:///{}", p.display().to_string().replace('\\', "/"))
+        });
+
+        let media_class = if status.result_type.as_deref() == Some("image") {
+          TaskMediaFileClass::Image
+        } else {
+          TaskMediaFileClass::Video
+        };
+
+        // Update the task database
+        let updated = update_successful_task_status_with_metadata(UpdateSuccessfulTaskArgs {
+          db: task_database.get_connection(),
+          task_id: &task.id,
+          maybe_batch_token: None,
+          maybe_primary_media_file_token: None,
+          maybe_primary_media_file_class: Some(media_class),
+          maybe_primary_media_file_thumbnail_url_template: None,
+          maybe_primary_media_file_cdn_url: maybe_cdn_url.as_deref(),
+        })
+        .await?;
+
+        if updated {
+          info!("[Wan2GP Polling] Task {} marked as complete in database", task_id_str);
+
+          // Notify the frontend
+          let event = GenerationCompleteEvent {
+            action: Some(GenerationAction::GenerateVideo),
+            service: GenerationServiceProvider::Wan2gp,
+            model: None,
+          };
+          if let Err(err) = event.send(app_handle) {
+            error!("[Wan2GP Polling] Failed to send completion event: {:?}", err);
+          }
+        }
+      }
+      "failed" | "error" => {
+        let err_msg = status.error.unwrap_or_else(|| "Unknown error".to_string());
+        error!("[Wan2GP Polling] Task {} failed: {}", task_id_str, err_msg);
+
+        let _ = update_task_status(UpdateTaskArgs {
+          db: task_database.get_connection(),
+          task_id: &task.id,
+          task_status: TaskStatus::Failed,
+        })
+        .await;
+      }
+      "cancelled" => {
+        info!("[Wan2GP Polling] Task {} was cancelled", task_id_str);
+
+        let _ = update_task_status(UpdateTaskArgs {
+          db: task_database.get_connection(),
+          task_id: &task.id,
+          task_status: TaskStatus::Cancelled,
+        })
+        .await;
+      }
+      "running" | "queued" | "pending" => {
+        // Still in progress
+        if status.progress > 0.0 {
+          info!(
+            "[Wan2GP Polling] Task {} progress: {:.0}% — {}",
+            task_id_str,
+            status.progress * 100.0,
+            status.progress_message.as_deref().unwrap_or("")
+          );
+        }
+      }
+      other => {
+        warn!("[Wan2GP Polling] Task {} has unknown status: {}", task_id_str, other);
+      }
+    }
+
+    // Small delay between task checks
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+  }
+
+  Ok(())
+}

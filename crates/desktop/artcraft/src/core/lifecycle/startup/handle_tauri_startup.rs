@@ -22,6 +22,8 @@ use crate::services::storyteller::state::storyteller_credential_manager::Storyte
 use crate::services::worldlabs::state::worldlabs_bearer_bridge::WorldlabsBearerBridge;
 use crate::services::worldlabs::state::worldlabs_credential_manager::WorldlabsCredentialManager;
 use crate::services::worldlabs::threads::worldlabs_marble_task_polling::worldlabs_marble_task_polling;
+use crate::services::wan2gp::threads::wan2gp_task_polling::wan2gp_task_polling_thread::wan2gp_task_polling_thread;
+use crate::services::wan2gp::state::wan2gp_settings::Wan2gpSettings;
 use errors::AnyhowResult;
 use tauri::{AppHandle, Manager};
 
@@ -114,6 +116,15 @@ pub async fn handle_tauri_startup(
     task_database.clone(),
     worldlabs_creds_manager.clone(),
     storyteller_creds_manager.clone(),
+  ));
+
+  // Wan2GP local task polling
+  let wan2gp_settings = app.state::<Wan2gpSettings>().inner().clone();
+  tauri::async_runtime::spawn(wan2gp_task_polling_thread(
+    app.clone(),
+    root.clone(),
+    task_database.clone(),
+    wan2gp_settings,
   ));
 
   spawn_discord_presence_thread()?;

@@ -226,3 +226,58 @@ cd frontend; npm install; npm run dev
 Use NotebookLM MCP for extended memory and research. See workflow: `/notebooklm-rag`
 - Config: `~/.gemini/antigravity/mcp_config.json` (NOT in repo — credentials safe)
 - Auth: Browser-based Google login (one-time per machine)
+
+## Implementation Status (as of 2026-03-13)
+
+### ✅ Working
+- **Wan2GP provider enum** added throughout frontend + backend
+- **Bridge plugin API** — all endpoints operational (status, models, generate, tasks, cancel)
+- **Model discovery** — Wan2GP reports 75 video + 5 image models
+- **Cloud/Local toggle** — UI toggle on video page to switch between cloud and local
+- **Local model selector** — fetches real model list from bridge, displayed in dropdown
+- **Task submission** — ArtCraft sends generate request, bridge accepts + returns task_id
+- **Wan2GP renders** — bridge calls `process_tasks_cli()`, output appears in output folder
+- **Wan2GP settings panel** in Account Settings pane
+- **Task polling thread** (`wan2gp_task_polling_thread`) — polls bridge for task status
+
+### 🔧 In Progress
+- **Result download** — polling thread downloads completed result back to ArtCraft temp
+- **Task completion propagation** — marking tasks as done, emitting frontend events
+
+### ❌ Not Yet Implemented
+- **Resolution mapping** — ArtCraft picks "720p" but bridge gets wrong resolution
+  - TronikSlate uses: cinematic=832x480, vertical=480x832, square=624x624
+  - Need to map ArtCraft's aspect ratio picker → Wan2GP resolution string
+- **Progress UI indicator** — no progress bar or stop button in ArtCraft during render
+- **Cancel support** — client has `cancel_task()` but no UI button yet
+- **Speed profiles** — auto-select fastest profile (TronikSlate has `_get_fastest_profile()`)
+- **LTX frame math** — need `snap_to_8n1()` for LTX models (frames must be 8n+1)
+
+### Key File Locations (ArtCraft side)
+| What | Where |
+|------|-------|
+| Model selector toggle | `frontend/libs/components/model-selector/src/lib/classy-model-selector.tsx` |
+| Local model hook | `frontend/libs/components/model-selector/src/lib/use-wan2gp-local-models.tsx` |
+| Model selector store | `frontend/libs/components/model-selector/src/lib/classy-model-selector-store.ts` |
+| Provider icons | `frontend/libs/components/model-selector/src/lib/provider-icons.tsx` |
+| Wan2GP API (frontend) | `frontend/libs/tauri-api/src/lib/wan2gp/Wan2gpApi.ts` |
+| Enqueue request builder | `frontend/libs/tauri-api/src/lib/enqueue/EnqueueImageToVideo.ts` |
+| VideoModel enum (backend) | `crates/desktop/artcraft/src/core/commands/enqueue/image_to_video/enqueue_image_to_video_command.rs` |
+| Wan2GP video handler | `crates/desktop/artcraft/src/core/commands/enqueue/image_to_video/wan2gp/handle_wan2gp_video.rs` |
+| Wan2GP polling thread | `crates/desktop/artcraft/src/services/wan2gp/threads/wan2gp_task_polling/wan2gp_task_polling_thread.rs` |
+| Wan2GP Rust client | `crates/api_clients/wan2gp_client/src/client.rs` |
+| Wan2GP settings state | `crates/desktop/artcraft/src/services/wan2gp/state/wan2gp_settings.rs` |
+| Startup (spawns threads) | `crates/desktop/artcraft/src/core/lifecycle/startup/handle_tauri_startup.rs` |
+| Dev launcher (.bat) | `start-dev.bat` |
+
+### Dev Commands (Quick Reference)
+```powershell
+# Frontend only (from frontend/)
+npx nx run artcraft:dev
+
+# Full app with Tauri backend (from crates/desktop/artcraft/)
+$env:SQLX_OFFLINE="true"; $env:LIBCLANG_PATH="C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin"
+cargo tauri dev --config tauri.dev.override.json
+
+# Or just double-click: start-dev.bat
+```
