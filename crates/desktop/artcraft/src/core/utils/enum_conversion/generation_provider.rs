@@ -9,6 +9,7 @@ pub fn to_generation_service_provider(provider: GenerationProvider) -> Generatio
     GenerationProvider::Grok => GenerationServiceProvider::Grok,
     GenerationProvider::Midjourney => GenerationServiceProvider::Midjourney,
     GenerationProvider::Sora => GenerationServiceProvider::Sora,
+    GenerationProvider::Wan2gp => GenerationServiceProvider::Wan2gp,
     GenerationProvider::WorldLabs => GenerationServiceProvider::WorldLabs,
   }
 }
