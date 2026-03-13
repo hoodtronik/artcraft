@@ -130,13 +130,14 @@ Base URL: `http://localhost:7861`
 - `GenerationProvider` enum has 16-char max serialized length (for MySQL/sqlite)
 - Use `reqwest.workspace = true` for HTTP (not wreq — that's for anti-fingerprinting)
 
-### 🟡 Phase 3: ArtCraft Frontend (In Progress)
+### ✅ Phase 3: ArtCraft Frontend (Complete)
 1. ✅ Add `Wan2gp` to frontend `GenerationProvider` enum
 2. ✅ Add `Wan2GP` to `ModelCreator` enum
 3. ✅ Add "Local (Wan2GP)" video model entry in model selector
-4. 🔲 Wan2GP settings page (bridge URL, model picker from API)
-5. 🔲 Dynamic model list from bridge API (`GET /artcraft/api/models`)
-6. 🔲 Progress display from task polling
+4. ✅ Wan2GP settings block (bridge URL, model picker from API)
+5. ✅ 4 Tauri commands (get/update settings, get status, get models)
+6. ✅ TypeScript API wrappers in `@storyteller/tauri-api`
+7. ✅ Wan2gpAccountBlock with status, GPU info, model browser
 
 #### Frontend Architecture Notes
 - Frontend uses TailwindCSS (note: can check with `twMerge`)
@@ -144,6 +145,15 @@ Base URL: `http://localhost:7861`
 - Each model has `id`, `tauriId` (sent to Rust), `providers[]`, `creator`
 - Model selector is `ClassyModelSelector` component from `@storyteller/ui-model-selector`
 - Provider enum must match Rust serialization exactly (`snake_case`)
+- Tauri commands follow pattern: Rust command → TypeScript invoke wrapper → React component
+- Account blocks go in `libs/components/settings-modal/src/lib/panes/AccountSettings/`
+
+### 🔲 Phase 4: Auto-Launch (Optional)
+1. Detect bridge offline when Wan2GP provider selected
+2. Spawn `python wgp.py --multiple-images` as subprocess
+3. Wait for bridge API to come online
+4. Manage process lifecycle (start/stop with ArtCraft)
+- Uses existing `subprocess_common` crate pattern
 
 ## Critical Rules
 
