@@ -91,12 +91,38 @@ pub async fn handle_wan2gp_video(
     None
   };
 
+  // Map resolution: prefer request aspect ratio → settings → default
+  let resolution = match &request.aspect_ratio {
+    Some(ar) => {
+      // Map ArtCraft aspect ratios to Wan2GP resolution strings
+      use artcraft_router::api::common_aspect_ratio::CommonAspectRatio;
+      let res = match ar {
+        CommonAspectRatio::WideSixteenByNine => "1280x720",
+        CommonAspectRatio::WideTwentyOneByNine => "1280x544",
+        CommonAspectRatio::WideFourByThree => "960x720",
+        CommonAspectRatio::WideThreeByTwo => "960x640",
+        CommonAspectRatio::WideFiveByFour => "896x720",
+        CommonAspectRatio::Wide => "1280x720",
+        CommonAspectRatio::TallNineBySixteen => "720x1280",
+        CommonAspectRatio::TallNineByTwentyOne => "544x1280",
+        CommonAspectRatio::TallThreeByFour => "720x960",
+        CommonAspectRatio::TallTwoByThree => "640x960",
+        CommonAspectRatio::TallFourByFive => "720x896",
+        CommonAspectRatio::Tall => "720x1280",
+        CommonAspectRatio::Square | CommonAspectRatio::SquareHd => "832x832",
+        _ => "832x480", // Auto, Auto2k, Auto4k → sensible default
+      };
+      Some(res.to_string())
+    }
+    None => wan2gp_settings.resolution(),
+  };
+
   // Build the generation request
   let gen_request = GenerateRequest {
     model: wan2gp_model.clone(),
     prompt: request.prompt.clone(),
     output_type: Some("video".to_string()),
-    resolution: wan2gp_settings.resolution(),
+    resolution,
     seed: wan2gp_settings.seed(),
     num_inference_steps: wan2gp_settings.num_inference_steps(),
     guidance_scale: wan2gp_settings.guidance_scale(),
