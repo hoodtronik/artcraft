@@ -19,5 +19,6 @@ pub fn text_to_image_model_to_model_type(model: TextToImageModel) -> ModelType {
     TextToImageModel::Seedream4p5 => ModelType::Seedream4p5,
     TextToImageModel::Seedream5Lite => ModelType::Seedream5Lite,
     TextToImageModel::Midjourney => ModelType::Midjourney,
+    TextToImageModel::Wan2gpLocal => ModelType::NanoBanana, // Fallback; Wan2GP dispatches before this is called
   }
 }

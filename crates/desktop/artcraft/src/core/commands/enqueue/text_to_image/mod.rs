@@ -5,3 +5,4 @@ mod artcraft;
 mod grok;
 mod midjourney;
 mod sora;
+mod wan2gp;

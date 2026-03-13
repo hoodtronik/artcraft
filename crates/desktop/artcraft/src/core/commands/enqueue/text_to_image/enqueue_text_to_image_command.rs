@@ -8,6 +8,8 @@ use crate::core::commands::enqueue::text_to_image::artcraft::handle_text_to_imag
 use crate::core::commands::enqueue::text_to_image::grok::handle_grok::handle_grok;
 use crate::core::commands::enqueue::text_to_image::midjourney::handle_midjourney::handle_midjourney;
 use crate::core::commands::enqueue::text_to_image::sora::handle_text_to_image_sora::handle_text_to_image_sora;
+use crate::core::commands::enqueue::text_to_image::wan2gp::handle_wan2gp_image::handle_wan2gp_image;
+use crate::services::wan2gp::state::wan2gp_settings::Wan2gpSettings;
 use crate::core::commands::enqueue::text_to_image::text_to_image_models::text_to_image_model_to_model_type;
 use crate::core::commands::response::failure_response_wrapper::{CommandErrorResponseWrapper, CommandErrorStatus};
 use crate::core::commands::response::shorthand::Response;
@@ -79,6 +81,10 @@ pub enum TextToImageModel {
   // Generic Midjourney model, version unknown.
   #[serde(rename = "midjourney")]
   Midjourney,
+
+  // Local Wan2GP model (the specific model is in wan2gp_model_id)
+  #[serde(rename = "wan2gp_local")]
+  Wan2gpLocal,
 }
 
 #[derive(Deserialize, Debug)]
@@ -133,6 +139,11 @@ pub struct EnqueueTextToImageRequest {
   /// A frontend-defined payload that we'll send back to the frontend
   /// as a Tauri event on task completion.
   pub frontend_subscriber_payload: Option<String>,
+
+  /// OPTIONAL.
+  /// The specific Wan2GP model ID (e.g. "flux_dev", "sd3_medium").
+  /// Only used when model = wan2gp_local.
+  pub wan2gp_model_id: Option<String>,
 }
 
 // TODO(bt,2025-07-14): Support other aspect ratios / resolutions -
@@ -200,6 +211,7 @@ pub async fn enqueue_text_to_image_command(
   storyteller_creds_manager: State<'_, StorytellerCredentialManager>,
   sora_creds_manager: State<'_, SoraCredentialManager>,
   sora_task_queue: State<'_, SoraTaskQueue>,
+  wan2gp_settings: State<'_, Wan2gpSettings>,
 ) -> Response<EnqueueTextToImageSuccessResponse, EnqueueTextToImageErrorType, ()> {
 
   info!("enqueue_text_to_image called");
@@ -220,6 +232,7 @@ pub async fn enqueue_text_to_image_command(
     &app_env_configs,
     &sora_creds_manager,
     &sora_task_queue,
+    &wan2gp_settings,
   ).await;
 
   match result {
@@ -291,6 +304,7 @@ pub async fn handle_request(
   app_env_configs: &AppEnvConfigs,
   sora_creds_manager: &SoraCredentialManager,
   sora_task_queue: &SoraTaskQueue,
+  wan2gp_settings: &Wan2gpSettings,
 ) -> Result<TaskEnqueueSuccess, GenerateError> {
   
   let result = dispatch_request(
@@ -305,6 +319,7 @@ pub async fn handle_request(
     &grok_image_prompt_queue,
     &sora_creds_manager,
     &sora_task_queue,
+    wan2gp_settings,
   ).await;
   
   let success_event = match result {
@@ -359,6 +374,7 @@ pub async fn dispatch_request(
   grok_image_prompt_queue: &GrokImagePromptQueue,
   sora_creds_manager: &SoraCredentialManager,
   sora_task_queue: &SoraTaskQueue,
+  wan2gp_settings: &Wan2gpSettings,
 ) -> Result<TaskEnqueueSuccess, GenerateError> {
 
   let model = match request.model {
@@ -371,6 +387,7 @@ pub async fn dispatch_request(
   let provider = match (model, request.provider) {
     (TextToImageModel::GrokImage, _) => GenerationProvider::Grok,
     (TextToImageModel::Midjourney, _) => GenerationProvider::Midjourney,
+    (TextToImageModel::Wan2gpLocal, _) => GenerationProvider::Wan2gp,
     _ => request.provider.unwrap_or(GenerationProvider::Artcraft),
   };
 
@@ -410,6 +427,14 @@ pub async fn dispatch_request(
         app,
         sora_creds_manager,
         sora_task_queue,
+      ).await
+    }
+    GenerationProvider::Wan2gp => {
+      handle_wan2gp_image(
+        request,
+        app_data_root,
+        app_env_configs,
+        wan2gp_settings,
       ).await
     }
     _ => {

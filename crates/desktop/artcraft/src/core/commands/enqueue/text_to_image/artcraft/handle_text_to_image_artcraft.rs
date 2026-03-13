@@ -22,7 +22,7 @@ pub async fn handle_text_to_image_artcraft(
 ) -> Result<TaskEnqueueSuccess, GenerateError> {
 
   match model {
-    TextToImageModel::Midjourney | TextToImageModel::GrokImage => {
+    TextToImageModel::Midjourney | TextToImageModel::GrokImage | TextToImageModel::Wan2gpLocal => {
       Err(GenerateError::BadProviderForModel {
         provider: GenerationProvider::Artcraft,
         model: text_to_image_model_to_model_type(model),

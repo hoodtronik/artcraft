@@ -70,6 +70,7 @@ interface EnqueueTextToImageRawRequest {
   image_media_tokens?: string[];
   frontend_caller?: string;
   frontend_subscriber_id?: string;
+  wan2gp_model_id?: string;
 }
 
 export enum EnqueueTextToImageModel {
@@ -124,12 +125,20 @@ export const EnqueueTextToImage = async (request: EnqueueTextToImageRequest) : P
     throw new Error("No model specified in request: " + JSON.stringify(request));
   }
 
+  const isWan2gpLocal = modelName.startsWith("wan2gp_");
+
   let mutableRequest : EnqueueTextToImageRawRequest = {
-    model: modelName,
+    model: isWan2gpLocal ? "wan2gp_local" : modelName,
     prompt: request.prompt,
   };
 
-  if (!!request.provider) {
+  // Pass the actual Wan2GP model ID (strip the "wan2gp_" prefix)
+  if (isWan2gpLocal) {
+    mutableRequest.wan2gp_model_id = modelName.replace(/^wan2gp_/, "");
+    mutableRequest.provider = "wan2gp" as GenerationProvider;
+  }
+
+  if (!!request.provider && !isWan2gpLocal) {
     mutableRequest.provider = request.provider;
   }
 
