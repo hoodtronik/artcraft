@@ -45,6 +45,7 @@ primitives.workspace = true
 sqlite_tasks.workspace = true
 tokens.workspace = true
 url_utils.workspace = true
+wan2gp_client.workspace = true
 web_base64.workspace = true
 world_labs_client.workspace = true
 

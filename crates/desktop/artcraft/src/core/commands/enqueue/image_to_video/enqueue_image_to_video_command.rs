@@ -3,6 +3,7 @@ use crate::core::commands::enqueue::generate_error::{BadInputReason, GenerateErr
 use crate::core::commands::enqueue::image_to_video::artcraft::handle_artcraft_video::handle_video_artcraft;
 use crate::core::commands::enqueue::image_to_video::grok::handle_grok_video::handle_grok_video;
 use crate::core::commands::enqueue::image_to_video::sora2::handle_sora_sora2::handle_sora_sora2;
+use crate::core::commands::enqueue::image_to_video::wan2gp::handle_wan2gp_video::handle_wan2gp_video;
 use crate::core::commands::enqueue::task_enqueue_success::TaskEnqueueSuccess;
 use crate::core::commands::enqueue::text_to_image::enqueue_text_to_image_command::TextToImageModel;
 use crate::core::commands::response::failure_response_wrapper::{CommandErrorResponseWrapper, CommandErrorStatus};
@@ -213,6 +214,7 @@ pub async fn enqueue_image_to_video_command(
   storyteller_creds_manager: State<'_, StorytellerCredentialManager>,
   sora_task_queue: State<'_, SoraTaskQueue>,
   sora_creds_manager: State<'_, SoraCredentialManager>,
+  wan2gp_settings: State<'_, crate::services::wan2gp::state::wan2gp_settings::Wan2gpSettings>,
 ) -> Response<EnqueueImageToVideoSuccessResponse, EnqueueImageToVideoErrorType, ()> {
 
   info!("enqueue_image_to_video_command called, request: {:?}", request);
@@ -228,6 +230,7 @@ pub async fn enqueue_image_to_video_command(
     &grok_creds_manager,
     &sora_creds_manager,
     &storyteller_creds_manager,
+    &wan2gp_settings,
   ).await;
 
   match result {
@@ -301,6 +304,7 @@ pub async fn handle_request(
   grok_creds_manager: &GrokCredentialManager,
   sora_creds_manager: &SoraCredentialManager,
   storyteller_creds_manager: &StorytellerCredentialManager,
+  wan2gp_settings: &crate::services::wan2gp::state::wan2gp_settings::Wan2gpSettings,
 ) -> Result<TaskEnqueueSuccess, GenerateError> {
 
   let model = match request.model {
@@ -334,6 +338,14 @@ pub async fn handle_request(
         app_data_root,
         app_env_configs,
         sora_creds_manager,
+      ).await
+    }
+    GenerationProvider::Wan2gp => {
+      handle_wan2gp_video(
+        &request,
+        app_data_root,
+        app_env_configs,
+        wan2gp_settings,
       ).await
     }
     _ => {

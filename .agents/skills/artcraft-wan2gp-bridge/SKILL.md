@@ -112,12 +112,21 @@ Base URL: `http://localhost:7861`
 - CORS headers for Tauri app
 - Test script
 
-### 🔲 Phase 2: ArtCraft Rust Integration (Not Started)
-1. Add `Wan2GP` to `GenerationProvider` enum
-2. Create `wan2gp_client` crate in `crates/api_clients/`
-3. Add handler functions in enqueue commands
-4. Wire up in the `handle_request()` dispatcher
-5. Update tests
+### 🟡 Phase 2: ArtCraft Rust Integration (In Progress)
+1. ✅ Add `Wan2gp` to `GenerationProvider` enum (+ all match arms, tests)
+2. ✅ Add `Wan2gp` to `GenerationServiceProvider` (frontend events)
+3. ✅ Create `wan2gp_client` crate in `crates/api_clients/` (reqwest HTTP client)
+4. 🔲 Add Wan2GP handler in `image_to_video` enqueue command
+5. 🔲 Wire up `Wan2gp` in `handle_request()` dispatcher
+6. 🔲 Add wan2gp_client dependency to desktop app crate
+
+#### ArtCraft Rust Architecture Notes
+- Each provider has its own handler module under `image_to_video/{provider}/`
+- Handlers return `Result<TaskEnqueueSuccess, GenerateError>`
+- `TaskEnqueueSuccess` records task type, model, provider, and provider_job_id
+- The `enqueue_image_to_video_command.rs` dispatcher selects provider based on model + request
+- `GenerationProvider` enum has 16-char max serialized length (for MySQL/sqlite)
+- Use `reqwest.workspace = true` for HTTP (not wreq — that's for anti-fingerprinting)
 
 ### 🔲 Phase 3: ArtCraft Frontend (Not Started)
 1. Add "Local (Wan2GP)" provider option in model picker
