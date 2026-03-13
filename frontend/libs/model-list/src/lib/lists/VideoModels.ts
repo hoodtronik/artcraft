@@ -424,6 +424,27 @@ export const VIDEO_MODELS: VideoModel[] = [
     generateWithSound: true,
     progressBarTime: 100000,
   }),
+  // ── Local / Wan2GP ─────────────────────────────────────────────────
+  new VideoModel({
+    id: "wan2gp_local",
+    tauriId: "wan2gp_local",
+    fullName: "Local (Wan2GP)",
+    category: "video",
+    creator: ModelCreator.Wan2GP,
+    providers: [GenerationProvider.Wan2gp],
+    selectorName: "🖥️ Local (Wan2GP)",
+    selectorDescription: "Free, local GPU — 75+ open-source models",
+    selectorBadges: ["Local GPU"],
+    startFrame: true,
+    endFrame: true,
+    requiresImage: false,
+    supportsReferenceMode: true,
+    maxReferenceImages: 4,
+    resolutionOptions: ["480p", "720p"],
+    defaultResolution: "480p",
+    supportsSystemPrompt: false,
+    progressBarTime: 300000,
+  }),
 ];
 
 export const VIDEO_MODELS_BY_ID: Map<string, VideoModel> = new Map(

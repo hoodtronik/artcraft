@@ -18,6 +18,7 @@ export enum ModelCreator {
   Higgsfield = "Higgsfield",
   Alibaba = "Alibaba", // qwen and wanvideo
   Vidu = "Vidu",
+  Wan2GP = "Wan2GP",
   ArtCraft = "ArtCraft",
   Grok = "Grok",
   WorldLabs = "WorldLabs",

@@ -112,13 +112,15 @@ Base URL: `http://localhost:7861`
 - CORS headers for Tauri app
 - Test script
 
-### 🟡 Phase 2: ArtCraft Rust Integration (In Progress)
+### ✅ Phase 2: ArtCraft Rust Integration (Complete)
 1. ✅ Add `Wan2gp` to `GenerationProvider` enum (+ all match arms, tests)
 2. ✅ Add `Wan2gp` to `GenerationServiceProvider` (frontend events)
 3. ✅ Create `wan2gp_client` crate in `crates/api_clients/` (reqwest HTTP client)
-4. 🔲 Add Wan2GP handler in `image_to_video` enqueue command
-5. 🔲 Wire up `Wan2gp` in `handle_request()` dispatcher
-6. 🔲 Add wan2gp_client dependency to desktop app crate
+4. ✅ Add Wan2GP handler in `image_to_video` enqueue command
+5. ✅ Wire up `Wan2gp` in `handle_request()` dispatcher
+6. ✅ Add wan2gp_client dependency to desktop app crate
+7. ✅ Create `Wan2gpSettings` state (bridge URL, model, params)
+8. ✅ Create `wan2gp` service module
 
 #### ArtCraft Rust Architecture Notes
 - Each provider has its own handler module under `image_to_video/{provider}/`
