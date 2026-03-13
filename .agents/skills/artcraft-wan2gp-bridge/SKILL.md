@@ -5,6 +5,11 @@ description: Integrating open-source local GPU models into ArtCraft via the Wan2
 
 # ArtCraft ↔ Wan2GP Bridge Integration
 
+> **🧠 RAG Memory:** This project uses NotebookLM for persistent context across agent sessions.
+> Notebook ID: `fcf0f496-852a-4140-8dae-d6a344e3e3e1`
+> See `.agents/workflows/notebooklm-rag.md` for setup and **mandatory save-back instructions**.
+> Also read `.agents/context/wan2gp-handoff.md` and `.agents/context/wan2gp-tasks.md` for current state.
+
 ## Project Overview
 
 ArtCraft is a **Rust/Tauri desktop app** that currently only supports cloud-based AI providers (Artcraft, Fal, Grok, Midjourney, Sora, WorldLabs). The goal is to add support for **local open-source models** by connecting ArtCraft to **Wan2GP** (a Python/PyTorch GPU inference engine) via a REST API bridge.
@@ -243,11 +248,22 @@ cd frontend; npm install; npm run dev
     - The artcraft handler's match on model variants
     - The provider routing logic
 
-## Knowledge Base
+## Knowledge Base — NotebookLM RAG Memory
 
-Use NotebookLM MCP for extended memory and research. See workflow: `/notebooklm-rag`
-- Config: `~/.gemini/antigravity/mcp_config.json` (NOT in repo — credentials safe)
-- Auth: Browser-based Google login (one-time per machine)
+**Notebook ID:** `fcf0f496-852a-4140-8dae-d6a344e3e3e1`
+**Workflow:** `.agents/workflows/notebooklm-rag.md`
+
+This notebook is our **persistent memory** across agent sessions. Query it for architecture decisions, past session notes, and implementation patterns.
+
+### At session START:
+- Query the notebook: `mcp_notebooklm_notebook_query(notebook_id="fcf0f496-852a-4140-8dae-d6a344e3e3e1", query="...")`
+- Read `.agents/context/wan2gp-handoff.md` for the latest session notes
+- Read `.agents/context/wan2gp-tasks.md` for the current task list
+
+### At session END (⚠️ MANDATORY):
+- Save handoff notes to NotebookLM: `mcp_notebooklm_notebook_add_text(notebook_id="fcf0f496-852a-4140-8dae-d6a344e3e3e1", title="Agent Handoff Notes — YYYY-MM-DD", text="...")`
+- Update `.agents/context/wan2gp-handoff.md` and `.agents/context/wan2gp-tasks.md` in the repo
+- Commit and push
 
 ## Implementation Status (as of 2026-03-13 15:30 ET)
 

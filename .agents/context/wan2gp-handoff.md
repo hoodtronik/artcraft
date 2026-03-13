@@ -54,10 +54,21 @@ See `wan2gp-tasks.md` for the full prioritized task list. Top items:
 4. **Build env** — needs `SQLX_OFFLINE=true`, `LIBCLANG_PATH`, NASM in PATH. See SKILL.md for exact commands.
 5. **Rust toolchain pinned to 1.88.0** — sqlx breaks on 1.93+.
 
-## NotebookLM RAG
-- Workflow: `.agents/workflows/notebooklm-rag.md`
-- Has ArtCraft architecture docs, bridge plugin source, Wan2GP docs uploaded
-- Useful for researching ArtCraft patterns if you need context beyond these notes
+## NotebookLM RAG Memory (IMPORTANT — Read + Write)
+
+**Notebook ID:** `fcf0f496-852a-4140-8dae-d6a344e3e3e1`
+**Workflow:** `.agents/workflows/notebooklm-rag.md`
+
+This notebook is our persistent memory across agent sessions. It contains architecture docs, session notes, and task context.
+
+### At session START:
+- Read the `/notebooklm-rag` workflow for setup
+- Query the notebook for context: `mcp_notebooklm_notebook_query(notebook_id="fcf0f496-852a-4140-8dae-d6a344e3e3e1", query="...")`
+
+### At session END (MANDATORY):
+- Save your handoff notes to NotebookLM: `mcp_notebooklm_notebook_add_text(notebook_id="fcf0f496-852a-4140-8dae-d6a344e3e3e1", title="Agent Handoff Notes — YYYY-MM-DD", text="...")`
+- Update `.agents/context/wan2gp-handoff.md` and `.agents/context/wan2gp-tasks.md` in the repo
+- Commit and push so both the repo files AND NotebookLM stay in sync
 
 ## Files Modified This Session
 ```
