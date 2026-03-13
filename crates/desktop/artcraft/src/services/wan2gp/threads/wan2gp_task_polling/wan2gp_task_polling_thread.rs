@@ -17,6 +17,7 @@ use sqlite_tasks::queries::update_successful_task_status_with_metadata::{
   update_successful_task_status_with_metadata, UpdateSuccessfulTaskArgs,
 };
 use sqlite_tasks::queries::update_task_status::{update_task_status, UpdateTaskArgs};
+use std::sync::Arc;
 use tauri::AppHandle;
 use wan2gp_client::client::Wan2gpClient;
 
@@ -28,7 +29,7 @@ pub async fn wan2gp_task_polling_thread(
   app_handle: AppHandle,
   app_data_root: AppDataRoot,
   task_database: TaskDatabase,
-  wan2gp_settings: Wan2gpSettings,
+  wan2gp_settings: Arc<Wan2gpSettings>,
 ) -> ! {
   info!("[Wan2GP Polling] Starting task polling thread...");
 
@@ -164,7 +165,7 @@ async fn polling_loop(
         let _ = update_task_status(UpdateTaskArgs {
           db: task_database.get_connection(),
           task_id: &task.id,
-          task_status: TaskStatus::Failed,
+          status: TaskStatus::CompleteFailure,
         })
         .await;
       }
@@ -174,7 +175,7 @@ async fn polling_loop(
         let _ = update_task_status(UpdateTaskArgs {
           db: task_database.get_connection(),
           task_id: &task.id,
-          task_status: TaskStatus::Cancelled,
+          status: TaskStatus::CancelledByProvider,
         })
         .await;
       }

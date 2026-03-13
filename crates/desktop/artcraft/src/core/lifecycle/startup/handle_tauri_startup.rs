@@ -119,12 +119,13 @@ pub async fn handle_tauri_startup(
   ));
 
   // Wan2GP local task polling
-  let wan2gp_settings = app.state::<Wan2gpSettings>().inner().clone();
+  let wan2gp_settings_snapshot = app.state::<Wan2gpSettings>().snapshot();
+  let wan2gp_settings_for_poll = std::sync::Arc::new(Wan2gpSettings::from_data(wan2gp_settings_snapshot));
   tauri::async_runtime::spawn(wan2gp_task_polling_thread(
     app.clone(),
     root.clone(),
     task_database.clone(),
-    wan2gp_settings,
+    wan2gp_settings_for_poll,
   ));
 
   spawn_discord_presence_thread()?;
