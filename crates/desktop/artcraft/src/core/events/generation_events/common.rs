@@ -8,6 +8,7 @@ pub enum GenerationServiceProvider {
   Grok,
   Midjourney,
   Sora,
+  Wan2gp,
   WorldLabs,
 }
 

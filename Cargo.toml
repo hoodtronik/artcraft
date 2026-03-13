@@ -19,6 +19,7 @@ members = [
   "crates/api_clients/seedance2pro",
   "crates/api_clients/runwayml_client",
   "crates/api_clients/thumbnail_generator",
+  "crates/api_clients/wan2gp_client",
   "crates/api_clients/world_labs_api",
   "crates/api_clients/world_labs_client",
 
@@ -252,6 +253,7 @@ tokens = { path = "crates/schema/public/tokens" }
 url_utils = { path = "crates/lib/url_utils" }
 users = { path = "crates/lib/users" }
 web_base64 = { path = "crates/lib/data/web_base64" }
+wan2gp_client = { path = "crates/api_clients/wan2gp_client" }
 world_labs_api = { path = "crates/api_clients/world_labs_api" }
 world_labs_client = { path = "crates/api_clients/world_labs_client" }
 

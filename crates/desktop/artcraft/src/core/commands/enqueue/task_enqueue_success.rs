@@ -36,6 +36,7 @@ impl TaskEnqueueSuccess{
       GenerationProvider::Grok => GenerationServiceProvider::Grok,
       GenerationProvider::Midjourney => GenerationServiceProvider::Midjourney,
       GenerationProvider::Sora => GenerationServiceProvider::Sora,
+      GenerationProvider::Wan2gp => GenerationServiceProvider::Wan2gp,
       GenerationProvider::WorldLabs => GenerationServiceProvider::WorldLabs,
     }
   }

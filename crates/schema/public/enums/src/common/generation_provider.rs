@@ -25,6 +25,7 @@ pub enum GenerationProvider {
   Grok,
   Midjourney,
   Sora,
+  Wan2gp,
   WorldLabs,
 }
 
@@ -45,6 +46,7 @@ impl GenerationProvider {
       Self::Grok => "grok",
       Self::Midjourney => "midjourney",
       Self::Sora => "sora",
+      Self::Wan2gp => "wan2gp",
       Self::WorldLabs => "world_labs",
     }
   }
@@ -56,6 +58,7 @@ impl GenerationProvider {
       "grok" => Ok(Self::Grok),
       "midjourney" => Ok(Self::Midjourney),
       "sora" => Ok(Self::Sora),
+      "wan2gp" => Ok(Self::Wan2gp),
       "world_labs" => Ok(Self::WorldLabs),
       _ => Err(EnumError::CouldNotConvertFromString(value.to_string())),
     }
@@ -70,6 +73,7 @@ impl GenerationProvider {
       Self::Grok,
       Self::Midjourney,
       Self::Sora,
+      Self::Wan2gp,
       Self::WorldLabs,
     ])
   }
@@ -91,6 +95,7 @@ mod tests {
       assert_serialization(GenerationProvider::Grok, "grok");
       assert_serialization(GenerationProvider::Midjourney, "midjourney");
       assert_serialization(GenerationProvider::Sora, "sora");
+      assert_serialization(GenerationProvider::Wan2gp, "wan2gp");
       assert_serialization(GenerationProvider::WorldLabs, "world_labs");
     }
 
@@ -101,6 +106,7 @@ mod tests {
       assert_eq!(GenerationProvider::Grok.to_str(), "grok");
       assert_eq!(GenerationProvider::Midjourney.to_str(), "midjourney");
       assert_eq!(GenerationProvider::Sora.to_str(), "sora");
+      assert_eq!(GenerationProvider::Wan2gp.to_str(), "wan2gp");
       assert_eq!(GenerationProvider::WorldLabs.to_str(), "world_labs");
     }
 
@@ -111,6 +117,7 @@ mod tests {
       assert_eq!(GenerationProvider::from_str("grok").unwrap(), GenerationProvider::Grok);
       assert_eq!(GenerationProvider::from_str("midjourney").unwrap(), GenerationProvider::Midjourney);
       assert_eq!(GenerationProvider::from_str("sora").unwrap(), GenerationProvider::Sora);
+      assert_eq!(GenerationProvider::from_str("wan2gp").unwrap(), GenerationProvider::Wan2gp);
       assert_eq!(GenerationProvider::from_str("world_labs").unwrap(), GenerationProvider::WorldLabs);
     }
 
@@ -128,12 +135,13 @@ mod tests {
     #[test]
     fn all_variants() {
       let mut variants = GenerationProvider::all_variants();
-      assert_eq!(variants.len(), 6);
+      assert_eq!(variants.len(), 7);
       assert_eq!(variants.pop_first(), Some(GenerationProvider::Artcraft));
       assert_eq!(variants.pop_first(), Some(GenerationProvider::Fal));
       assert_eq!(variants.pop_first(), Some(GenerationProvider::Grok));
       assert_eq!(variants.pop_first(), Some(GenerationProvider::Midjourney));
       assert_eq!(variants.pop_first(), Some(GenerationProvider::Sora));
+      assert_eq!(variants.pop_first(), Some(GenerationProvider::Wan2gp));
       assert_eq!(variants.pop_first(), Some(GenerationProvider::WorldLabs));
       assert_eq!(variants.pop_first(), None);
     }
