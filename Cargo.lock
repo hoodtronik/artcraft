@@ -729,6 +729,7 @@ dependencies = [
  "tokio-util",
  "url",
  "url_utils",
+ "wan2gp_client",
  "web_base64",
  "workspace-build-acceleration",
  "world_labs_client",
@@ -13770,6 +13771,23 @@ checksum = "29790946404f91d9c5d06f9874efddea1dc06c5efe94541a7d6863108e3a5e4b"
 dependencies = [
  "same-file",
  "winapi-util",
+]
+
+[[package]]
+name = "wan2gp_client"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "errors",
+ "log",
+ "reqwest 0.12.23",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "tokio",
+ "url",
+ "workspace-build-acceleration",
 ]
 
 [[package]]

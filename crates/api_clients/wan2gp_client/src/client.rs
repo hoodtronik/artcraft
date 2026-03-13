@@ -95,11 +95,12 @@ impl Wan2gpClient {
     debug!("Wan2GP: GET {}", url);
 
     let resp = self.http.get(&url).send().await?;
+    let status_code = resp.status().as_u16();
 
     if !resp.status().is_success() {
       let body = resp.text().await.unwrap_or_default();
       return Err(Wan2gpError::HttpError {
-        status: resp.status().as_u16(),
+        status: status_code,
         message: body,
       });
     }
@@ -115,11 +116,12 @@ impl Wan2gpClient {
     debug!("Wan2GP: GET {}", url);
 
     let resp = self.http.get(&url).send().await?;
+    let status_code = resp.status().as_u16();
 
     if !resp.status().is_success() {
       let body = resp.text().await.unwrap_or_default();
       return Err(Wan2gpError::HttpError {
-        status: resp.status().as_u16(),
+        status: status_code,
         message: body,
       });
     }
@@ -163,11 +165,12 @@ impl Wan2gpClient {
       .timeout(POLL_TIMEOUT)
       .send()
       .await?;
+    let status_code = resp.status().as_u16();
 
     if !resp.status().is_success() {
       let body = resp.text().await.unwrap_or_default();
       return Err(Wan2gpError::HttpError {
-        status: resp.status().as_u16(),
+        status: status_code,
         message: body,
       });
     }
@@ -218,7 +221,7 @@ impl Wan2gpClient {
   }
 
   /// Download the result file of a completed task into memory.
-  pub async fn download_result(&self, task_id: &str) -> Result<bytes::Bytes, Wan2gpError> {
+  pub async fn download_result(&self, task_id: &str) -> Result<Vec<u8>, Wan2gpError> {
     let url = format!("{}/artcraft/api/tasks/{}/download", self.base_url, task_id);
     info!("Wan2GP: downloading result for task {}", task_id);
 
@@ -227,18 +230,19 @@ impl Wan2gpClient {
       .timeout(Duration::from_secs(120)) // Large file download timeout
       .send()
       .await?;
+    let status_code = resp.status().as_u16();
 
     if !resp.status().is_success() {
       let body = resp.text().await.unwrap_or_default();
       return Err(Wan2gpError::HttpError {
-        status: resp.status().as_u16(),
+        status: status_code,
         message: body,
       });
     }
 
     let bytes = resp.bytes().await.map_err(|e| Wan2gpError::Other(e.into()))?;
     info!("Wan2GP: downloaded {} bytes for task {}", bytes.len(), task_id);
-    Ok(bytes)
+    Ok(bytes.to_vec())
   }
 
   /// Cancel a running or pending task.
@@ -247,11 +251,12 @@ impl Wan2gpClient {
     info!("Wan2GP: cancelling task {}", task_id);
 
     let resp = self.http.post(&url).send().await?;
+    let status_code = resp.status().as_u16();
 
     if !resp.status().is_success() {
       let body = resp.text().await.unwrap_or_default();
       return Err(Wan2gpError::HttpError {
-        status: resp.status().as_u16(),
+        status: status_code,
         message: body,
       });
     }
