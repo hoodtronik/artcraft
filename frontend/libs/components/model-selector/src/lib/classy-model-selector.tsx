@@ -12,7 +12,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faChevronUp, faCloud, faDesktop } from "@fortawesome/pro-solid-svg-icons";
 import { GenerationProvider } from "@storyteller/api-enums";
 import { defaultModelForPage } from "./defaultModelForPage";
-import { useWan2gpLocalModels } from "./use-wan2gp-local-models";
+import { useWan2gpLocalModels, type LocalModelCategory } from "./use-wan2gp-local-models";
 
 interface ClassyModelSelectorProps {
   items: Omit<PopoverItem, "selected">[];
@@ -27,6 +27,7 @@ interface ClassyModelSelectorProps {
   providerTooltipDelayMs?: number;
   maxListHeight?: number | string;
   showLocalToggle?: boolean;
+  localModelCategory?: LocalModelCategory;
 }
 
 const DEFAULT_PROVIDER_OPTIONS: GenerationProvider[] = [GenerationProvider.Artcraft];
@@ -106,6 +107,7 @@ export function ClassyModelSelector({
   providerTooltipDelayMs = 300,
   maxListHeight = "60vh",
   showLocalToggle = false,
+  localModelCategory = "video",
   ...popoverProps
 }: ClassyModelSelectorProps) {
   const { selectedModels, setSelectedModel, setSelectedProvider, isLocalMode, setLocalMode } =
@@ -120,7 +122,7 @@ export function ClassyModelSelector({
   );
 
   // Fetch local Wan2GP models when in local mode
-  const { models: localModelItems } = useWan2gpLocalModels();
+  const { models: localModelItems } = useWan2gpLocalModels(localModelCategory);
 
   // Choose items based on mode
   const activeItems = (showLocalToggle && isLocalMode) ? localModelItems : items;

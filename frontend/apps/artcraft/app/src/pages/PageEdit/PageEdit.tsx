@@ -739,6 +739,8 @@ const PageEdit = () => {
           buttonClassName="bg-transparent p-0 text-lg hover:bg-transparent text-base-fg opacity-80 hover:opacity-100"
           showIconsInList
           triggerLabel="Model"
+          showLocalToggle
+          localModelCategory="image"
         />
       </div>
       <div className="absolute bottom-6 right-6 z-20 flex items-center gap-2">
