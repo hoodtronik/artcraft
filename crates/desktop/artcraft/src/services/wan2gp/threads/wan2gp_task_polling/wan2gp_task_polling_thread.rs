@@ -1,6 +1,9 @@
 use crate::core::events::basic_sendable_event_trait::BasicSendableEvent;
 use crate::core::events::generation_events::common::{GenerationAction, GenerationServiceProvider};
 use crate::core::events::generation_events::generation_complete_event::GenerationCompleteEvent;
+use crate::core::events::functional_events::text_to_image_generation_complete_event::{
+  GeneratedImage, TextToImageGenerationCompleteEvent,
+};
 use crate::core::state::data_dir::app_data_root::AppDataRoot;
 use crate::core::state::data_dir::trait_data_subdir::DataSubdir;
 use crate::core::state::task_database::TaskDatabase;
@@ -172,7 +175,7 @@ async fn polling_loop(
         if updated {
           info!("[Wan2GP Polling] Task {} marked as complete in database", task_id_str);
 
-          // Notify the frontend
+          // Notify the frontend (general completion event for task queue)
           let event = GenerationCompleteEvent {
             action: Some(generation_action),
             service: GenerationServiceProvider::Wan2gp,
@@ -180,6 +183,32 @@ async fn polling_loop(
           };
           if let Err(err) = event.send(app_handle) {
             error!("[Wan2GP Polling] Failed to send completion event: {:?}", err);
+          }
+
+          // For image tasks: also emit the text_to_image_generation_complete_event
+          // so the main UI page (TextToImage.tsx) can update its batch from "pending" to "complete"
+          if is_image {
+            if let Some(ref cdn_url_str) = maybe_cdn_url {
+              match url::Url::parse(cdn_url_str) {
+                Ok(parsed_url) => {
+                  let img_event = TextToImageGenerationCompleteEvent {
+                    generated_images: vec![GeneratedImage {
+                      media_token: synthetic_token.clone(),
+                      cdn_url: parsed_url,
+                      maybe_thumbnail_template: None,
+                    }],
+                    maybe_frontend_subscriber_id: task.frontend_subscriber_id.clone(),
+                    maybe_frontend_subscriber_payload: task.frontend_subscriber_payload.clone(),
+                  };
+                  if let Err(err) = img_event.send(app_handle) {
+                    error!("[Wan2GP Polling] Failed to send text-to-image event: {:?}", err);
+                  }
+                }
+                Err(e) => {
+                  warn!("[Wan2GP Polling] Could not parse cdn_url for image event: {}", e);
+                }
+              }
+            }
           }
         }
       }

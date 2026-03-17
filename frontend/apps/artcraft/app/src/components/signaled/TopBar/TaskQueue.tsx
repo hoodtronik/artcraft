@@ -596,7 +596,7 @@ export const TaskQueue = () => {
             return {
               id: t.id,
               ...formatTitleParts(t),
-              thumbnailUrl: serverThumbnail || cachedThumbnail || undefined,
+              thumbnailUrl: serverThumbnail || cachedThumbnail || t.completed_item?.primary_media_file?.cdn_url || undefined,
               imageUrls: t.completed_item?.primary_media_file?.cdn_url
                 ? [t.completed_item?.primary_media_file?.cdn_url]
                 : [],

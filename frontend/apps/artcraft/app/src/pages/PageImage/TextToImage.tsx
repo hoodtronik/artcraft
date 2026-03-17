@@ -4,6 +4,7 @@ import {
   getThumbnailUrl,
   THUMBNAIL_SIZES,
 } from "@storyteller/common";
+import { useTextToImageGenerationCompleteEvent } from "@storyteller/tauri-events";
 import { PromptBoxImage } from "@storyteller/ui-promptbox";
 import { uploadImage } from "../../components/reusable/UploadModalMedia/uploadImage";
 import BackgroundGallery from "./BackgroundGallery";
@@ -47,8 +48,16 @@ const TextToImage = ({ imageMediaId, imageUrl }: TextToImageProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const batches = useTextToImageStore((s) => s.batches);
   const startBatch = useTextToImageStore((s) => s.startBatch);
-  //const completeBatch = useTextToImageStore((s) => s.completeBatch);
+  const completeBatch = useTextToImageStore((s) => s.completeBatch);
   const failBatch = useTextToImageStore((s) => s.failBatch);
+
+  // Listen for text-to-image generation complete events to transition batches from "pending" to "complete"
+  useTextToImageGenerationCompleteEvent(async (event) => {
+    completeBatch(
+      event.generated_images || [],
+      event.maybe_frontend_subscriber_id,
+    );
+  });
   const dismissBatch = useTextToImageStore((s) => s.dismissBatch);
   const resetBatches = useTextToImageStore((s) => s.reset);
   const [imageRowVisible, setImageRowVisible] = useState(false);
