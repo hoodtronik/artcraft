@@ -306,43 +306,71 @@ pub async fn handle_request(
   sora_task_queue: &SoraTaskQueue,
   wan2gp_settings: &Wan2gpSettings,
 ) -> Result<TaskEnqueueSuccess, GenerateError> {
-  
-  let result = dispatch_request(
-    &request,
-    &app,
-    &app_data_root,
-    &provider_priority_store,
-    &storyteller_creds_manager,
-    &app_env_configs,
-    &mj_creds_manager,
-    &grok_creds_manager,
-    &grok_image_prompt_queue,
-    &sora_creds_manager,
-    &sora_task_queue,
-    wan2gp_settings,
-  ).await;
-  
-  let success_event = match result {
-    Err(err) => return Err(err),
-    Ok(event) => event,
-  };
+  // For Wan2GP, the bridge processes one task = one image, so we need to submit
+  // N separate tasks. Other providers handle multi-image natively in their API.
+  let num_images = request.number_images.map(|n| n as u16).unwrap_or(1);
+  let is_wan2gp = matches!(request.model, Some(TextToImageModel::Wan2gpLocal))
+    || matches!(request.provider, Some(GenerationProvider::Wan2gp));
+  let loop_count = if is_wan2gp { num_images } else { 1 };
 
-  let result = success_event
-      .insert_into_task_database_with_frontend_payload(
-        task_database,
-        request.frontend_caller,
-        request.frontend_subscriber_id.as_deref(),
-        request.frontend_subscriber_payload.as_deref(),
-      )
-      .await;
+  let mut first_success: Option<TaskEnqueueSuccess> = None;
 
-  if let Err(err) = result {
-    error!("Failed to create task in database: {:?}", err);
-    // NB: Fail open, but find a way to flag this.
+  for i in 0..loop_count {
+    let result = dispatch_request(
+      &request,
+      &app,
+      &app_data_root,
+      &provider_priority_store,
+      &storyteller_creds_manager,
+      &app_env_configs,
+      &mj_creds_manager,
+      &grok_creds_manager,
+      &grok_image_prompt_queue,
+      &sora_creds_manager,
+      &sora_task_queue,
+      wan2gp_settings,
+    ).await;
+
+    let success_event = match result {
+      Err(err) => {
+        if first_success.is_some() {
+          // Already have at least one success — log and continue
+          error!("Wan2GP multi-image: task {} of {} failed: {:?}", i + 1, loop_count, err);
+          continue;
+        }
+        return Err(err);
+      }
+      Ok(event) => event,
+    };
+
+    // Only the first task gets the subscriber ID so the frontend batch matches
+    let subscriber_id = if i == 0 {
+      request.frontend_subscriber_id.as_deref()
+    } else {
+      None
+    };
+
+    let result = success_event
+        .insert_into_task_database_with_frontend_payload(
+          task_database,
+          request.frontend_caller,
+          subscriber_id,
+          request.frontend_subscriber_payload.as_deref(),
+        )
+        .await;
+
+    if let Err(err) = result {
+      error!("Failed to create task in database: {:?}", err);
+      // NB: Fail open, but find a way to flag this.
+    }
+
+    if first_success.is_none() {
+      first_success = Some(success_event);
+    }
   }
 
-  let num_images = request.number_images.map(|n| n as u16).unwrap_or(1);
-  
+  let success_event = first_success.unwrap(); // Safe: at least one iteration succeeded or returned Err above
+
   let is_image_to_image = request.image_media_tokens
       .as_ref()
       .map(|tokens| !tokens.is_empty())
