@@ -9,6 +9,7 @@ use crate::services::wan2gp::state::wan2gp_settings::Wan2gpSettings;
 use enums::common::generation_provider::GenerationProvider;
 use enums::tauri::tasks::task_media_file_class::TaskMediaFileClass;
 use enums::tauri::tasks::task_status::TaskStatus;
+use enums::tauri::tasks::task_type::TaskType;
 use log::{error, info, warn};
 use sqlite_tasks::queries::list_tasks_by_provider_and_status::{
   list_tasks_by_provider_and_status, ListTasksByProviderAndStatusArgs,
@@ -95,14 +96,15 @@ async fn polling_loop(
       "complete" => {
         info!("[Wan2GP Polling] Task {} complete!", task_id_str);
 
+        // Determine if this is an image or video based on the task type in our database
+        let is_image = task.task_type == TaskType::ImageGeneration
+          || task.task_type == TaskType::ImageInpaintEdit
+          || status.result_type.as_deref() == Some("image");
+
         // Download the result from the bridge
         let result_path = match client.download_result(&task_id_str).await {
           Ok(bytes) => {
-            let ext = if status.result_type.as_deref() == Some("image") {
-              "png"
-            } else {
-              "mp4"
-            };
+            let ext = if is_image { "png" } else { "mp4" };
             let filename = format!("wan2gp_{}.{}", task_id_str, ext);
             let temp_dir = app_data_root.temp_dir().path();
             let dest = temp_dir.join(&filename);
@@ -121,15 +123,23 @@ async fn polling_loop(
           }
         };
 
-        // For local files, use a file:// URL so the frontend can display them
+        // Use Tauri's asset protocol to serve local files to the frontend
+        // https://asset.localhost/ serves files from the filesystem in Tauri v2
         let maybe_cdn_url = result_path.as_ref().map(|p| {
-          format!("file:///{}", p.display().to_string().replace('\\', "/"))
+          let path_str = p.display().to_string().replace('\\', "/");
+          format!("https://asset.localhost/{}", path_str)
         });
 
-        let media_class = if status.result_type.as_deref() == Some("image") {
+        let media_class = if is_image {
           TaskMediaFileClass::Image
         } else {
           TaskMediaFileClass::Video
+        };
+
+        let generation_action = if is_image {
+          GenerationAction::GenerateImage
+        } else {
+          GenerationAction::GenerateVideo
         };
 
         // Update the task database
@@ -149,7 +159,7 @@ async fn polling_loop(
 
           // Notify the frontend
           let event = GenerationCompleteEvent {
-            action: Some(GenerationAction::GenerateVideo),
+            action: Some(generation_action),
             service: GenerationServiceProvider::Wan2gp,
             model: None,
           };
