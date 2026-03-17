@@ -83,13 +83,34 @@ Base URL: `http://localhost:7861`
   "num_inference_steps": 30,
   "guidance_scale": 5,
   "video_length": 81,
-  "image_start": "<base64>",
-  "image_end": "<base64>",
-  "image_refs": ["<base64>"],
+  "image_start_b64": "<base64>",
+  "image_end_b64": "<base64>",
+  "image_refs_b64": ["<base64>"],
   "profile_params": {},
   "extra_params": {}
 }
 ```
+
+> **⚠️ CRITICAL:** Field names use `_b64` suffix! The Rust `GenerateRequest` struct
+> uses `#[serde(rename)]` to map `image_start` → `image_start_b64`, etc.
+> The bridge plugin only recognizes the `_b64` suffixed names.
+
+### Reference Image Flags (REQUIRED for image_refs)
+
+When sending `image_refs_b64`, you **MUST** also set `video_prompt_type: "KI"` in
+`extra_params`. Without this flag, Wan2GP ignores the reference images entirely.
+
+```json
+"extra_params": {
+  "video_prompt_type": "KI",
+  "image_prompt_type": "",
+  "denoising_strength": 0.5
+}
+```
+
+**Flag meanings:** K=keep reference, I=image ref, M=mask, D=depth, P=pose, V=VACE
+
+See `wan2gp_image_model_params.md` in this skill folder for per-model details.
 
 ### Task Status Response
 ```json
@@ -129,6 +150,9 @@ Base URL: `http://localhost:7861`
 9. ✅ Create `wan2gp` service module
 10. ✅ Cancel task command (`wan2gp_cancel_task_command`)
 11. ✅ Resolution mapping (aspect ratio → WxH for both video and image)
+12. ✅ Reference image passing (image_media_tokens → base64 → bridge)
+13. ✅ Multi-image generation loop (N tasks for Wan2GP, shared subscriber ID)
+14. ✅ Serde rename for bridge field alignment (image_start → image_start_b64)
 
 #### ArtCraft Rust Architecture Notes
 - Each provider has its own handler module under `image_to_video/{provider}/` or `text_to_image/{provider}/`
