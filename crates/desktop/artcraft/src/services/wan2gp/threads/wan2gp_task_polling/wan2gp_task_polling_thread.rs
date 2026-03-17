@@ -102,7 +102,7 @@ async fn polling_loop(
           || status.result_type.as_deref() == Some("image");
 
         // Download the result from the bridge
-        let result_path = match client.download_result(&task_id_str).await {
+        let (result_bytes, result_path) = match client.download_result(&task_id_str).await {
           Ok(bytes) => {
             let ext = if is_image { "png" } else { "mp4" };
             let filename = format!("wan2gp_{}.{}", task_id_str, ext);
@@ -111,24 +111,33 @@ async fn polling_loop(
 
             if let Err(e) = tokio::fs::write(&dest, &bytes).await {
               error!("[Wan2GP Polling] Failed to write result file: {}", e);
-              None
+              (Some(bytes), None)
             } else {
               info!("[Wan2GP Polling] Downloaded result to: {:?} ({} bytes)", dest, bytes.len());
-              Some(dest)
+              (Some(bytes), Some(dest))
             }
           }
           Err(e) => {
             warn!("[Wan2GP Polling] Failed to download result for {}: {}", task_id_str, e);
-            None
+            (None, None)
           }
         };
 
-        // Use Tauri's asset protocol to serve local files to the frontend
-        // https://asset.localhost/ serves files from the filesystem in Tauri v2
-        let maybe_cdn_url = result_path.as_ref().map(|p| {
-          let path_str = p.display().to_string().replace('\\', "/");
-          format!("https://asset.localhost/{}", path_str)
-        });
+        // Build a displayable URL for the frontend
+        let maybe_cdn_url = if is_image {
+          // For images: use a data URL (base64-encoded) — works everywhere, no Tauri permissions needed
+          result_bytes.as_ref().map(|bytes| {
+            use base64::Engine;
+            let b64 = base64::engine::general_purpose::STANDARD.encode(bytes);
+            format!("data:image/png;base64,{}", b64)
+          })
+        } else {
+          // For videos: use a file:// URL (Tauri allows these for video elements)
+          result_path.as_ref().map(|p| {
+            let path_str = p.display().to_string().replace('\\', "/");
+            format!("file:///{}", path_str)
+          })
+        };
 
         let media_class = if is_image {
           TaskMediaFileClass::Image
