@@ -33,6 +33,8 @@ export function getThumbnailUrl(
 
 export function addCorsParam(url: string | null | undefined): string | null {
   if (!url) return null;
+  // Skip non-HTTP URLs (data:, file:, blob:) — appending ?cors=1 breaks them
+  if (url.startsWith("data:") || url.startsWith("file:") || url.startsWith("blob:")) return url;
   return `${url}?cors=1`;
 }
 
