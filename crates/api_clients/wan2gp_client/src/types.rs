@@ -84,14 +84,17 @@ pub struct GenerateRequest {
 
   /// Base64-encoded start image (for I2V models).
   #[serde(skip_serializing_if = "Option::is_none")]
+  #[serde(rename = "image_start_b64")]
   pub image_start: Option<String>,
 
   /// Base64-encoded end image.
   #[serde(skip_serializing_if = "Option::is_none")]
+  #[serde(rename = "image_end_b64")]
   pub image_end: Option<String>,
 
   /// Base64-encoded reference images.
   #[serde(skip_serializing_if = "Option::is_none")]
+  #[serde(rename = "image_refs_b64")]
   pub image_refs: Option<Vec<String>>,
 
   /// Speed profile parameters to apply.

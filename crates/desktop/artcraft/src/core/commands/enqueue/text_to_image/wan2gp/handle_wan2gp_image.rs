@@ -3,8 +3,10 @@ use crate::core::commands::enqueue::text_to_image::enqueue_text_to_image_command
 use crate::core::commands::enqueue::task_enqueue_success::TaskEnqueueSuccess;
 use crate::core::state::app_env_configs::app_env_configs::AppEnvConfigs;
 use crate::core::state::data_dir::app_data_root::AppDataRoot;
+use crate::core::utils::download_media_file_to_temp_dir::download_media_file_to_temp_dir;
 use crate::services::wan2gp::state::wan2gp_settings::Wan2gpSettings;
 use anyhow::anyhow;
+use base64::Engine;
 use enums::common::generation_provider::GenerationProvider;
 use enums::tauri::tasks::task_type::TaskType;
 use log::{error, info};
@@ -39,6 +41,25 @@ pub async fn handle_wan2gp_image(
     .ok_or_else(|| {
       GenerateError::AnyhowError(anyhow!("No Wan2GP model selected. Pick a model from the Local mode selector or configure one in Wan2GP settings."))
     })?;
+
+  let b64_engine = base64::engine::general_purpose::STANDARD;
+
+  // Handle reference images (image_media_tokens → base64)
+  let image_refs_b64 = if let Some(ref tokens) = request.image_media_tokens {
+    let mut refs = Vec::new();
+    for token in tokens {
+      let local_file = download_media_file_to_temp_dir(
+        app_env_configs,
+        app_data_root,
+        token,
+      ).await?;
+      let bytes = tokio::fs::read(local_file.path()).await.map_err(GenerateError::IoError)?;
+      refs.push(b64_engine.encode(&bytes));
+    }
+    if refs.is_empty() { None } else { Some(refs) }
+  } else {
+    None
+  };
 
   // Map resolution from aspect ratio if provided
   let resolution = match &request.common_aspect_ratio {
@@ -75,12 +96,12 @@ pub async fn handle_wan2gp_image(
     video_length: None, // Not applicable for images
     image_start: None,
     image_end: None,
-    image_refs: None,
+    image_refs: image_refs_b64,
     profile_params: wan2gp_settings.profile_params(),
     extra_params: None,
   };
 
-  info!("Submitting image generation to Wan2GP bridge: model={}", wan2gp_model);
+  info!("Submitting image generation to Wan2GP bridge: model={}, has_refs={}", wan2gp_model, gen_request.image_refs.is_some());
 
   // Submit the task
   let gen_response = client.generate(&gen_request).await.map_err(|e| {
