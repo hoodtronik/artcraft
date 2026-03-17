@@ -343,12 +343,9 @@ pub async fn handle_request(
       Ok(event) => event,
     };
 
-    // Only the first task gets the subscriber ID so the frontend batch matches
-    let subscriber_id = if i == 0 {
-      request.frontend_subscriber_id.as_deref()
-    } else {
-      None
-    };
+    // All tasks share the same subscriber ID so completeBatch can match
+    // and append each image to the same batch in the main UI.
+    let subscriber_id = request.frontend_subscriber_id.as_deref();
 
     let result = success_event
         .insert_into_task_database_with_frontend_payload(

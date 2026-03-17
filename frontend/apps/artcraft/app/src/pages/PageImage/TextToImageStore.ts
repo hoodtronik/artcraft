@@ -62,24 +62,28 @@ export const useTextToImageStore = create<TextToImageState>((set, get) => ({
     maybeSubscriberId?: string,
     maybePrompt?: string,
   ) => {
-    const pending = maybeSubscriberId
+    // Find by subscriber ID first, then fall back to oldest pending
+    const match = maybeSubscriberId
       ? get().batches.find((b) => b.subscriberId === maybeSubscriberId)
       : get().batches.find((b) => b.status === "pending");
-    //const prompt = pending?.prompt ?? maybePrompt ?? "";
-    //const modelLabel = pending?.modelLabel ?? "";
-    // Mark the most recent pending batch complete, or create one if none exists
+    //const prompt = match?.prompt ?? maybePrompt ?? "";
+    //const modelLabel = match?.modelLabel ?? "";
+    // Mark the most recent pending batch complete, or append to already-complete batch
     set((s) => {
-      const idx = pending
-        ? s.batches.findIndex((b) => b.id === pending.id)
+      const idx = match
+        ? s.batches.findIndex((b) => b.id === match.id)
         : -1;
       if (idx === -1) {
         return { batches: s.batches };
       }
+      const existing = s.batches[idx];
       const updated = [...s.batches];
+      // Append new images to any already-existing images (for multi-image)
+      const mergedImages = [...existing.images, ...images].slice(0, 4);
       updated[idx] = {
-        ...updated[idx],
+        ...existing,
         status: "complete",
-        images: images.slice(0, 4),
+        images: mergedImages,
       };
       return { batches: updated };
     });
