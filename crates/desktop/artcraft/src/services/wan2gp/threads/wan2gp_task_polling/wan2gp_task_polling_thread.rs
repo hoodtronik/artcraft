@@ -10,6 +10,7 @@ use enums::common::generation_provider::GenerationProvider;
 use enums::tauri::tasks::task_media_file_class::TaskMediaFileClass;
 use enums::tauri::tasks::task_status::TaskStatus;
 use enums::tauri::tasks::task_type::TaskType;
+use tokens::tokens::media_files::MediaFileToken;
 use log::{error, info, warn};
 use sqlite_tasks::queries::list_tasks_by_provider_and_status::{
   list_tasks_by_provider_and_status, ListTasksByProviderAndStatusArgs,
@@ -151,12 +152,17 @@ async fn polling_loop(
           GenerationAction::GenerateVideo
         };
 
+        // Generate a synthetic media file token for local Wan2GP results.
+        // The frontend's get_task_queue_command uses .zip() on token + cdn_url,
+        // so BOTH must be Some for completed_item to be populated.
+        let synthetic_token = MediaFileToken(format!("wan2gp_{}", task_id_str));
+
         // Update the task database
         let updated = update_successful_task_status_with_metadata(UpdateSuccessfulTaskArgs {
           db: task_database.get_connection(),
           task_id: &task.id,
           maybe_batch_token: None,
-          maybe_primary_media_file_token: None,
+          maybe_primary_media_file_token: Some(&synthetic_token),
           maybe_primary_media_file_class: Some(media_class),
           maybe_primary_media_file_thumbnail_url_template: None,
           maybe_primary_media_file_cdn_url: maybe_cdn_url.as_deref(),
