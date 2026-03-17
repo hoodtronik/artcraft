@@ -65,6 +65,11 @@ export function useWan2gpLocalModels(category: LocalModelCategory = "video"): {
                 providers: [GenerationProvider.Wan2gp],
                 maxGenerationCount: 4,
                 defaultGenerationCount: 1,
+                canUseImagePrompt: true,
+                maxImagePromptCount: 6,
+                canChangeAspectRatio: true,
+                canTextToImage: true,
+                progressBarTime: 60000, // Local models are slower; 60s default
               });
 
               return {
