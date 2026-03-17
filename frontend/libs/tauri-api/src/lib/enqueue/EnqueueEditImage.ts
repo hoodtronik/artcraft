@@ -75,6 +75,7 @@ interface RawEnqueueEditImageRequest {
   zoom?: number;
   frontend_caller?: string;
   frontend_subscriber_id?: string;
+  wan2gp_model_id?: string;
 }
 
 export enum EnqueueEditImageErrorType {
@@ -143,12 +144,21 @@ export const EnqueueEditImage = async (request: EnqueueEditImageRequest) : Promi
     throw new Error("No model specified in request: " + JSON.stringify(request));
   }
 
+  // Detect Wan2GP local models (model ID starts with "wan2gp_")
+  const isWan2gpLocal = typeof modelName === "string" && modelName.startsWith("wan2gp_");
+
   let mutableRequest : RawEnqueueEditImageRequest = {
-    model: modelName,
+    model: isWan2gpLocal ? "wan2gp_local" : modelName,
     prompt: request.prompt,
   };
-  
-  if (!!request.provider) {
+
+  // For Wan2GP local models, set the real model ID and force provider
+  if (isWan2gpLocal) {
+    mutableRequest.wan2gp_model_id = modelName;
+    mutableRequest.provider = GenerationProvider.Wan2gp;
+  }
+
+  if (!!request.provider && !isWan2gpLocal) {
     mutableRequest.provider = request.provider;
   }
 

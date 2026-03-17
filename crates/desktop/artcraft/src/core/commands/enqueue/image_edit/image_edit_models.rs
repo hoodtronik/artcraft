@@ -15,5 +15,6 @@ pub fn image_edit_model_to_model_type(model: ImageEditModel) -> ModelType {
     ImageEditModel::Seedream5Lite => ModelType::Seedream5Lite,
     ImageEditModel::QwenEdit2511Angles => ModelType::QwenEdit2511Angles,
     ImageEditModel::Flux2LoraAngles => ModelType::Flux2LoraAngles,
+    ImageEditModel::Wan2gpLocal => ModelType::NanoBanana, // Fallback; Wan2GP dispatches before this
   }
 }

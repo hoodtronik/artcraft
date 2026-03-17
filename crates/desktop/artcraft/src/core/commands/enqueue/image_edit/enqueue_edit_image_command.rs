@@ -4,6 +4,8 @@ use crate::core::commands::enqueue::generate_error::{BadInputReason, GenerateErr
 use crate::core::commands::enqueue::image_edit::artcraft::handle_image_edit_artcraft::handle_image_edit_artcraft;
 use crate::core::commands::enqueue::image_edit::image_edit_models::image_edit_model_to_model_type;
 use crate::core::commands::enqueue::image_edit::sora::handle_image_edit_sora::handle_image_edit_sora;
+use crate::core::commands::enqueue::image_edit::wan2gp::handle_wan2gp_image_edit::handle_wan2gp_image_edit;
+use crate::services::wan2gp::state::wan2gp_settings::Wan2gpSettings;
 use crate::core::commands::enqueue::task_enqueue_success::TaskEnqueueSuccess;
 use crate::core::commands::response::failure_response_wrapper::{CommandErrorResponseWrapper, CommandErrorStatus};
 use crate::core::commands::response::shorthand::{Response, ResponseOrErrorType};
@@ -87,11 +89,9 @@ pub enum ImageEditModel {
   #[serde(rename = "flux_2_lora_angles")]
   Flux2LoraAngles,
 
-//  #[serde(rename = "qwen")]
-//  Qwen,
-//
-//  #[serde(rename = "seededit_3")]
-//  SeedEdit3,
+  // Local Wan2GP model (the specific model is in wan2gp_model_id)
+  #[serde(rename = "wan2gp_local")]
+  Wan2gpLocal,
 }
 
 #[derive(Deserialize, Debug)]
@@ -162,6 +162,11 @@ pub struct EnqueueEditImageCommand {
   /// A frontend-defined payload that we'll send back to the frontend
   /// as a Tauri event on task completion.
   pub frontend_subscriber_payload: Option<String>,
+
+  /// OPTIONAL.
+  /// The specific Wan2GP model ID (e.g. "flux_dev", "qwen_edit").
+  /// Only used when model = wan2gp_local.
+  pub wan2gp_model_id: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Copy, Clone)]
@@ -236,6 +241,7 @@ pub async fn enqueue_edit_image_command(
   storyteller_creds_manager: State<'_, StorytellerCredentialManager>,
   sora_creds_manager: State<'_, SoraCredentialManager>,
   sora_task_queue: State<'_, SoraTaskQueue>,
+  wan2gp_settings: State<'_, Wan2gpSettings>,
 ) -> ResponseOrErrorType<EnqueueEditImageSuccessResponse, EnqueueEditImageErrorType> {
 
   info!("enqueue_edit_image_command called; image media tokens : {:?}, full request: {:?}",
@@ -252,6 +258,7 @@ pub async fn enqueue_edit_image_command(
     &storyteller_creds_manager,
     &sora_creds_manager,
     &sora_task_queue,
+    &wan2gp_settings,
   ).await;
 
   match result {
@@ -303,6 +310,7 @@ pub async fn handle_request(
   storyteller_creds_manager: &StorytellerCredentialManager,
   sora_creds_manager: &SoraCredentialManager,
   sora_task_queue: &SoraTaskQueue,
+  wan2gp_settings: &Wan2gpSettings,
 ) -> Result<TaskEnqueueSuccess, GenerateError> {
 
   let model = match request.model {
@@ -312,8 +320,10 @@ pub async fn handle_request(
     }
   };
 
-  let provider = request.provider
-      .unwrap_or(GenerationProvider::Artcraft);
+  let provider = match model {
+    ImageEditModel::Wan2gpLocal => GenerationProvider::Wan2gp,
+    _ => request.provider.unwrap_or(GenerationProvider::Artcraft),
+  };
   
   info!("edit image with {:?} via provider {:?}", &model, &provider);
 
@@ -337,6 +347,14 @@ pub async fn handle_request(
         app_env_configs,
         sora_creds_manager,
         sora_task_queue,
+      ).await?
+    }
+    GenerationProvider::Wan2gp => {
+      handle_wan2gp_image_edit(
+        request,
+        app_data_root,
+        app_env_configs,
+        wan2gp_settings,
       ).await?
     }
     _ => {

@@ -21,6 +21,13 @@ pub async fn handle_image_edit_artcraft(
 ) -> Result<TaskEnqueueSuccess, GenerateError> {
   
   match model {
+    ImageEditModel::Wan2gpLocal => {
+      // Should never reach here — Wan2GP is dispatched before reaching artcraft handler
+      Err(GenerateError::BadProviderForModel {
+        provider: enums::common::generation_provider::GenerationProvider::Artcraft,
+        model: crate::core::commands::enqueue::image_edit::image_edit_models::image_edit_model_to_model_type(model),
+      })
+    }
     ImageEditModel::FluxProKontextMax => handle_artcraft_flux_kontext_edit(request, app, app_data_root, app_env_configs, storyteller_creds_manager).await,
     ImageEditModel::Gemini25Flash | ImageEditModel::NanoBanana => {
       handle_image_edit_artcraft_via_router(request, app_env_configs, storyteller_creds_manager, CommonImageModel::NanaBanana, GenerationModel::NanoBanana).await
