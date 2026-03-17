@@ -84,6 +84,19 @@ pub async fn handle_wan2gp_image(
     None => wan2gp_settings.resolution(),
   };
 
+  // When reference images are provided, we must tell Wan2GP to use them.
+  // Without video_prompt_type: "KI", the model ignores image_refs entirely.
+  // See .agents/skills/artcraft-wan2gp-bridge/wan2gp_image_model_params.md
+  let extra_params = if image_refs_b64.is_some() {
+    Some(serde_json::json!({
+      "video_prompt_type": "KI",   // K=keep reference, I=image reference mode
+      "image_prompt_type": "",     // Not using image_start, so leave empty
+      "denoising_strength": 0.5,  // Preserve more of the reference image
+    }))
+  } else {
+    None
+  };
+
   // Build the generation request
   let gen_request = GenerateRequest {
     model: wan2gp_model.clone(),
@@ -98,7 +111,7 @@ pub async fn handle_wan2gp_image(
     image_end: None,
     image_refs: image_refs_b64,
     profile_params: wan2gp_settings.profile_params(),
-    extra_params: None,
+    extra_params,
   };
 
   info!("Submitting image generation to Wan2GP bridge: model={}, has_refs={}", wan2gp_model, gen_request.image_refs.is_some());
