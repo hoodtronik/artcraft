@@ -24,7 +24,7 @@ use sqlite_tasks::queries::update_successful_task_status_with_metadata::{
 };
 use sqlite_tasks::queries::update_task_status::{update_task_status, UpdateTaskArgs};
 use std::sync::Arc;
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 use wan2gp_client::client::Wan2gpClient;
 
 /// Background thread that polls the Wan2GP bridge for task completion.
@@ -266,15 +266,26 @@ async fn polling_loop(
         .await;
       }
       "running" | "queued" | "pending" => {
-        // Still in progress
+        // Emit real progress to frontend so it can override time-based progress bar
+        let progress_pct = (status.progress * 100.0).min(99.0);
+        let progress_msg = status.progress_message.clone().unwrap_or_default();
+
         if status.progress > 0.0 {
           info!(
             "[Wan2GP Polling] Task {} progress: {:.0}% — {}",
             task_id_str,
-            status.progress * 100.0,
-            status.progress_message.as_deref().unwrap_or("")
+            progress_pct,
+            progress_msg
           );
         }
+
+        // Emit lightweight progress event (no TauriEventName needed)
+        let _ = app_handle.emit("wan2gp-progress-event", serde_json::json!({
+          "provider_job_id": task_id_str,
+          "progress": progress_pct,
+          "message": progress_msg,
+          "status": status.status,
+        }));
       }
       other => {
         warn!("[Wan2GP Polling] Task {} has unknown status: {}", task_id_str, other);

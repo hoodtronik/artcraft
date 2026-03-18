@@ -462,6 +462,8 @@ export const TaskQueue = () => {
   const selectedVideoModel = useSelectedVideoModel(ModelPage.ImageToVideo);
   // Snapshot per-task duration so switching models doesn't affect existing items
   const taskDurationRef = useRef<Map<string, number>>(new Map());
+  // Real progress from Wan2GP bridge (provider_job_id → 0-100)
+  const wan2gpProgressRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     let cancelled = false;
@@ -545,12 +547,18 @@ export const TaskQueue = () => {
                 20000;
               taskDurationRef.current.set(t.id, duration);
             }
-            const raw = ((now - createdMs) / duration) * 100;
-            const progress = Math.min(95, Math.max(0, raw));
+            const isLocal = String(t.provider || "").toLowerCase() === "wan2gp";
+            // For local tasks, prefer real GPU progress from wan2gp-progress-event
+            const realProgress = isLocal && t.provider_job_id
+              ? wan2gpProgressRef.current.get(String(t.provider_job_id))
+              : undefined;
+            const raw = realProgress !== undefined
+              ? realProgress
+              : ((now - createdMs) / duration) * 100;
+            const progress = Math.min(99, Math.max(0, raw));
             const elapsed = now - createdMs;
             const estimatedTimeLeftMs = Math.max(0, duration - elapsed);
             const parts = formatTitleParts(t);
-            const isLocal = String(t.provider || "").toLowerCase() === "wan2gp";
             const canDismiss = !isLocal && (now - createdMs > 5 * 60 * 1000); // 5 minutes, not for local tasks
             return {
               id: t.id,
@@ -680,6 +688,7 @@ export const TaskQueue = () => {
 
     let unlistenComplete: Promise<UnlistenFn> | null = null;
     let unlistenFailed: Promise<UnlistenFn> | null = null;
+    let unlistenProgress: Promise<UnlistenFn> | null = null;
     (async () => {
       // Update immediately when Tauri signals a generation completion
       unlistenComplete = listen("generation-complete-event", () => {
@@ -693,6 +702,13 @@ export const TaskQueue = () => {
           load();
         }
       });
+      // Real progress from Wan2GP bridge polling thread
+      unlistenProgress = listen("wan2gp-progress-event", (event: any) => {
+        const { provider_job_id, progress } = event.payload || {};
+        if (provider_job_id != null && progress != null) {
+          wan2gpProgressRef.current.set(String(provider_job_id), Number(progress));
+        }
+      });
     })();
     return () => {
       cancelled = true;
@@ -703,6 +719,9 @@ export const TaskQueue = () => {
       }
       if (unlistenFailed) {
         unlistenFailed.then((f) => f());
+      }
+      if (unlistenProgress) {
+        unlistenProgress.then((f) => f());
       }
     };
   }, [
