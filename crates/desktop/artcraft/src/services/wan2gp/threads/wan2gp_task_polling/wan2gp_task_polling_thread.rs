@@ -1,6 +1,7 @@
 use crate::core::events::basic_sendable_event_trait::BasicSendableEvent;
 use crate::core::events::generation_events::common::{GenerationAction, GenerationServiceProvider};
 use crate::core::events::generation_events::generation_complete_event::GenerationCompleteEvent;
+use crate::core::events::generation_events::generation_failed_event::GenerationFailedEvent;
 use crate::core::events::functional_events::text_to_image_generation_complete_event::{
   GeneratedImage, TextToImageGenerationCompleteEvent,
 };
@@ -222,6 +223,37 @@ async fn polling_loop(
           status: TaskStatus::CompleteFailure,
         })
         .await;
+
+        // Determine the action type from the task
+        let is_image = task.task_type == TaskType::ImageGeneration
+          || task.task_type == TaskType::ImageInpaintEdit;
+
+        let generation_action = if is_image {
+          GenerationAction::GenerateImage
+        } else {
+          GenerationAction::GenerateVideo
+        };
+
+        // Emit GenerationFailedEvent so the main UI can mark batches as failed
+        let fail_event = GenerationFailedEvent {
+          action: generation_action,
+          service: GenerationServiceProvider::Wan2gp,
+          model: None,
+          reason: Some(err_msg),
+        };
+        if let Err(err) = fail_event.send(app_handle) {
+          error!("[Wan2GP Polling] Failed to send failure event: {:?}", err);
+        }
+
+        // Also emit GenerationCompleteEvent so the notification dropdown refreshes
+        let complete_event = GenerationCompleteEvent {
+          action: Some(generation_action),
+          service: GenerationServiceProvider::Wan2gp,
+          model: None,
+        };
+        if let Err(err) = complete_event.send(app_handle) {
+          error!("[Wan2GP Polling] Failed to send completion event for failure: {:?}", err);
+        }
       }
       "cancelled" => {
         info!("[Wan2GP Polling] Task {} was cancelled", task_id_str);
