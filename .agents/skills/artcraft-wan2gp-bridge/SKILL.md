@@ -24,29 +24,32 @@ ArtCraft (Rust/Tauri) → HTTP → ArtCraft Bridge Plugin (stdlib http.server :7
 
 The bridge runs **inside** Wan2GP's Python process as a plugin, giving it direct in-process access to the headless render function. No model reloading needed.
 
+## Git Repositories (HARD RULES)
+
+> **⚠️ CRITICAL:** NEVER commit or push to the Wan2GP repo (`pinokiofactory/wan.git`). We do NOT own it.
+> Only commit/push to the two repos below.
+
+| Repo | GitHub | Local Path |
+|------|--------|------------|
+| **ArtCraft** (Rust/Tauri desktop app) | `hoodtronik/artcraft` | `F:\__PROJECTS\ArtCraft` |
+| **ArtCraft Bridge** (Wan2GP plugin) | `hoodtronik/artcraft-bridge` | `F:\pinokio\api\wan.git\app\plugins\artcraft-bridge\` |
+
+- **Wan2GP** (`F:\pinokio\api\wan.git\app`) is a third-party install — read-only, never commit here.
+- **TronikSlate** (`F:\pinokio\api\TronikSlate`) is reference code only.
+
 ## Key Locations
 
 ### ArtCraft (Rust/Tauri Desktop App)
 - **Workspace:** `F:\__PROJECTS\ArtCraft`
 - **Provider enum:** `crates/schema/public/enums/src/common/generation_provider.rs`
-  - Currently: `Artcraft, Fal, Grok, Midjourney, Sora, WorldLabs`
-  - Needs: `Wan2GP` variant added
 - **Video generation command:** `crates/desktop/artcraft/src/core/commands/enqueue/image_to_video/enqueue_image_to_video_command.rs`
-  - Has `handle_request()` dispatcher that routes to provider-specific handlers
-  - Needs: `handle_wan2gp_video()` handler
+- **Image generation command:** `crates/desktop/artcraft/src/core/commands/enqueue/text_to_image/enqueue_text_to_image_command.rs`
+- **Wan2GP handlers:** `crates/desktop/artcraft/src/core/commands/enqueue/*/wan2gp/`
+- **Wan2GP polling thread:** `crates/desktop/artcraft/src/services/wan2gp/threads/wan2gp_task_polling/`
 - **Frontend:** `frontend/apps/artcraft/app/`
-- **API clients:** `crates/api_clients/` (each provider has its own crate)
-  - Needs: `wan2gp_client` crate
+- **API clients:** `crates/api_clients/wan2gp_client/`
 
-### Wan2GP (Python/PyTorch Inference Engine)
-- **Location:** `F:\pinokio\api\wan.git\app`
-- **Core headless render:** `wgp.py` line ~7343 → `process_tasks_cli(queue, state)`
-- **Default settings:** `models/_settings.json`
-- **Model definitions:** `defaults/*.json` and `finetunes/*.json`
-- **Model checkpoints:** `ckpts/`
-- **Plugin system:** `shared/utils/plugins.py` → `WAN2GPPlugin` base class
-
-### ArtCraft Bridge Plugin (OUR CODE)
+### ArtCraft Bridge Plugin (OUR CODE — has its own git repo)
 - **Location:** `F:\pinokio\api\wan.git\app\plugins\artcraft-bridge\`
 - **Main file:** `plugin.py` — stdlib HTTP API server + task execution engine
 - **Config:** Plugin is enabled in `wgp_config.json` → `enabled_plugins` list
