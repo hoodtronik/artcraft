@@ -2,21 +2,20 @@ import { Modal } from "@storyteller/ui-modal";
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faUser,
   faCog,
   faVolumeHigh,
   faCircleInfo,
-  faCreditCard,
   faPalette,
 } from "@fortawesome/pro-solid-svg-icons";
 import { twMerge } from "tailwind-merge";
 import { MiscSettingsPane } from "./panes/MiscSettingsPane";
 import { AudioSettingsPane } from "./panes/AudioSettingsPane";
-import { AccountSettingsPane } from "./panes/AccountSettings/AccountSettingsPane";
+// Cloud provider UIs disabled — kept for reference:
+// import { AccountSettingsPane } from "./panes/AccountSettings/AccountSettingsPane";
 import { AboutSettingsPane } from "./panes/AboutSettingsPane";
-import { ProviderPrioritySettingsPane } from "./panes/ProviderPrioritySettingsPane";
+// import { ProviderPrioritySettingsPane } from "./panes/ProviderPrioritySettingsPane";
 import { gtagEvent } from "@storyteller/google-analytics";
-import { BillingSettingsPane } from "./panes/BillingSettingsPane";
+// import { BillingSettingsPane } from "./panes/BillingSettingsPane";
 import { AppearanceSettingsPane } from "./panes/AppearanceSettingsPane";
 
 interface SettingsModalProps {
@@ -54,8 +53,9 @@ export const SettingsModal = ({
   const sections = [
     { id: "general" as const, label: "General", icon: faCog },
 
-    { id: "accounts" as const, label: "Accounts", icon: faUser },
-    { id: "billing" as const, label: "Plan & Credits", icon: faCreditCard },
+    // Cloud provider UIs disabled — kept for reference:
+    // { id: "accounts" as const, label: "Accounts", icon: faUser },
+    // { id: "billing" as const, label: "Plan & Credits", icon: faCreditCard },
 
     /* {
       id: "provider_priority" as const,
@@ -77,18 +77,19 @@ export const SettingsModal = ({
         return <AudioSettingsPane />;
       case "general":
         return <MiscSettingsPane />;
-      case "accounts":
-        return (
-          <AccountSettingsPane
-            globalAccountLogoutCallback={globalAccountLogoutCallback}
-          />
-        );
+      // Cloud provider UIs disabled — kept for reference:
+      // case "accounts":
+      //   return (
+      //     <AccountSettingsPane
+      //       globalAccountLogoutCallback={globalAccountLogoutCallback}
+      //     />
+      //   );
       case "about":
         return <AboutSettingsPane />;
-      case "provider_priority":
-        return <ProviderPrioritySettingsPane />;
-      case "billing":
-        return <BillingSettingsPane />;
+      // case "provider_priority":
+      //   return <ProviderPrioritySettingsPane />;
+      // case "billing":
+      //   return <BillingSettingsPane />;
     }
   };
 

@@ -6,10 +6,19 @@
       "path": "../button-icon-select"
     },
     {
+      "path": "../../analytics/google-analytics"
+    },
+    {
+      "path": "../../tauri-api"
+    },
+    {
       "path": "../camera-settings-modal"
     },
     {
-      "path": "../../state/subscription"
+      "path": "../toaster"
+    },
+    {
+      "path": "../../tauri-utils"
     },
     {
       "path": "../../api-enums"
@@ -18,22 +27,10 @@
       "path": "../../model-list"
     },
     {
-      "path": "../../analytics/google-analytics"
-    },
-    {
-      "path": "../../tauri-api"
-    },
-    {
-      "path": "../../tauri-utils"
-    },
-    {
       "path": "../modal"
     },
     {
       "path": "../popover"
-    },
-    {
-      "path": "../toaster"
     },
     {
       "path": "../../common"

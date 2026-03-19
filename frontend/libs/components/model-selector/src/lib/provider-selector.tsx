@@ -24,9 +24,10 @@ interface ProviderSelectorProps {
 }
 
 const DEFAULT_PROVIDER_OPTIONS: Provider[] = [
-  Provider.ArtCraft,
-  Provider.Fal,
-  Provider.Sora,
+  // Cloud providers disabled — kept for reference:
+  // Provider.ArtCraft,
+  // Provider.Fal,
+  // Provider.Sora,
 ];
 
 export function ProviderSelector({

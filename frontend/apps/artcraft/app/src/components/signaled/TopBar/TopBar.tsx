@@ -19,8 +19,9 @@ import { FilterMediaClasses } from "@storyteller/api";
 import { getCreatorIcon, ModelCreator } from "@storyteller/model-list";
 import { useCreditsState } from "@storyteller/credits";
 import { gtagEvent } from "@storyteller/google-analytics";
-import { ProviderBillingModal } from "@storyteller/provider-billing-modal";
-import { ProviderSetupModal } from "@storyteller/provider-setup-modal";
+// Cloud provider modals disabled — kept for reference:
+// import { ProviderBillingModal } from "@storyteller/provider-billing-modal";
+// import { ProviderSetupModal } from "@storyteller/provider-setup-modal";
 import { useSubscriptionState } from "@storyteller/subscription";
 import { DownloadUrl } from "@storyteller/tauri-api";
 import {
@@ -642,8 +643,10 @@ export const TopBar = ({ pageName }: Props) => {
         onMake3DWorldClicked={handleMake3DWorldFromGallery}
       />
 
+      {/* Cloud provider modals disabled — kept for reference:
       <ProviderSetupModal />
       <ProviderBillingModal isVideoPage={tabStore.activeTabId === "VIDEO"} />
+      */}
       <CreditsModal />
       <CostBreakdownModal activeTabId={tabStore.activeTabId} />
     </>
