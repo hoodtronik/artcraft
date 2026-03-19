@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { PLYLoader } from "three/examples/jsm/loaders/PLYLoader.js";
 import { SplatMesh } from "@sparkjsdev/spark";
 
 export interface Viewer3DProps {
@@ -303,6 +304,44 @@ export function Viewer3D({
           console.log("Splat loaded");
         },
       });
+    } else if (modelUrl.endsWith(".ply") || modelUrl.includes(".ply")) {
+      console.log("[Viewer3D] .ply format detected");
+      const plyLoader = new PLYLoader();
+      plyLoader.load(
+        modelUrl,
+        (geometry) => {
+          console.log("[Viewer3D] PLY loaded successfully");
+          geometry.computeVertexNormals();
+
+          // Use vertex colors if available, otherwise a neutral material
+          const hasColors = geometry.hasAttribute("color");
+          const material = new THREE.MeshStandardMaterial({
+            vertexColors: hasColors,
+            color: hasColors ? 0xffffff : 0x8899aa,
+            roughness: 0.6,
+            metalness: 0.2,
+            flatShading: false,
+            side: THREE.DoubleSide,
+          });
+
+          const mesh = new THREE.Mesh(geometry, material);
+          onModelLoaded(mesh);
+        },
+        (progress) => {
+          if (progress.total > 0) {
+            console.log(
+              "[Viewer3D] PLY loading progress:",
+              ((progress.loaded / progress.total) * 100).toFixed(2) + "%",
+            );
+          }
+        },
+        (error) => {
+          console.error("[Viewer3D] Error loading PLY:", error);
+          if (cubeRef.current) {
+            cubeRef.current.visible = true;
+          }
+        },
+      );
     } else {
       const loader = new GLTFLoader();
       loader.load(
