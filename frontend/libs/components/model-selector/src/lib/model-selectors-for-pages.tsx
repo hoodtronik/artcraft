@@ -39,8 +39,8 @@ const buildItems = (
  */
 
 // ── Cloud provider filter ───────────────────────────────────────────
-// Only show models backed by the local Wan2GP provider.
-// Cloud-only models (no `providers` field, or providers that don't include Wan2gp) are hidden.
+// Only applied to VIDEO models where a local Wan2GP model exists.
+// IMAGE models are left unfiltered for now (no local image alternative yet).
 const isLocalModel = (m: Model): boolean =>
   m.getProviders().includes(GenerationProvider.Wan2gp);
 
@@ -49,7 +49,7 @@ export const TEXT_TO_IMAGE_PAGE_MODEL_LIST: ModelList =
     (function (): Model[] {
       const set: Set<Model> = new Set();
       IMAGE_MODELS
-        .filter((model) => model.canTextToImage && isLocalModel(model))
+        .filter((model) => model.canTextToImage)
         .forEach((m) => set.add(m));
       const list = Array.from(set);
       list.sort((a, b) => a.selectorName?.localeCompare(b.selectorName));
@@ -63,7 +63,7 @@ export const CANVAS_2D_PAGE_MODEL_LIST: ModelList =
     (function (): Model[] {
       const set: Set<Model> = new Set();
       IMAGE_MODELS
-        .filter((m) => (m.canEditImages || m.tags?.includes(ModelTag.InstructiveEdit)) && isLocalModel(m))
+        .filter((m) => m.canEditImages || m.tags?.includes(ModelTag.InstructiveEdit))
         .forEach((m) => set.add(m));
       const list = Array.from(set);
       list.sort((a, b) => a.selectorName?.localeCompare(b.selectorName));
@@ -77,7 +77,7 @@ export const STAGE_3D_PAGE_MODEL_LIST: ModelList =
     (function (): Model[] {
       const set: Set<Model> = new Set();
       IMAGE_MODELS
-        .filter((m) => m.tags?.includes(ModelTag.InstructiveEdit) && isLocalModel(m))
+        .filter((m) => m.tags?.includes(ModelTag.InstructiveEdit))
         .forEach((m) => set.add(m));
       const list = Array.from(set);
       list.sort((a, b) => a.selectorName?.localeCompare(b.selectorName));
@@ -96,7 +96,7 @@ export const IMAGE_EDITOR_PAGE_MODEL_LIST: ModelList =
     (function (): Model[] {
       const set: Set<Model> = new Set();
       IMAGE_MODELS
-        .filter((m) => m.canEditImages && isLocalModel(m))
+        .filter((m) => m.canEditImages)
         .forEach((m) => set.add(m));
       const list = Array.from(set);
       list.sort((a, b) => a.selectorName?.localeCompare(b.selectorName));
@@ -124,7 +124,7 @@ export const ANGLES_PAGE_MODEL_LIST: ModelList =
     (function (): Model[] {
       const set: Set<Model> = new Set();
       IMAGE_MODELS
-        .filter((m) => m.canEditAngles && isLocalModel(m))
+        .filter((m) => m.canEditAngles)
         .forEach((m) => set.add(m));
       const list = Array.from(set);
       list.sort((a, b) => a.selectorName?.localeCompare(b.selectorName));
