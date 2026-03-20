@@ -129,11 +129,13 @@ export function ClassyModelSelector({
 
   // Initialize selected model if not set
   useEffect(() => {
-    if (!selectedModels[page] && activeItems[0]) {
+    if (!selectedModels[page] && activeItems.length > 0) {
       const itemModels: Model[] = activeItems
         .map(item => item.model)
-        .filter(model => model !== undefined);
-      setSelectedModel(page, defaultModelForPage(itemModels, page));
+        .filter((model): model is Model => model !== undefined);
+      if (itemModels.length > 0) {
+        setSelectedModel(page, defaultModelForPage(itemModels, page));
+      }
     }
   }, [isLocalMode]);
 
@@ -151,8 +153,9 @@ export function ClassyModelSelector({
   }, [activeItems, providersByModel, page, selectedProvidersByModel]);
 
   const handleModelSelect = (item: PopoverItem) => {
+    if (!item.model || item.disabled) return; // Skip header items
     console.log(`Model selector changed on page "${page}": `, item.model);
-    setSelectedModel(page, item.model!);
+    setSelectedModel(page, item.model);
   };
 
   const modelList = useMemo(
