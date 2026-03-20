@@ -44,6 +44,7 @@ export interface UpdateWan2gpSettingsRequest {
   num_inference_steps?: number;
   guidance_scale?: number;
   video_length?: number;
+  profile_params?: Record<string, unknown>;
 }
 
 // ── API calls ──────────────────────────────────────────────────────────────
@@ -77,4 +78,24 @@ export const cancelWan2gpTask = async (
   return (await invoke("wan2gp_cancel_task_command", {
     taskId,
   })) as Wan2gpCancelResponse;
+};
+
+// ── Profiles ───────────────────────────────────────────────────────────────
+
+export interface Wan2gpProfileInfo {
+  name: string;
+  params: Record<string, unknown>;
+}
+
+export interface Wan2gpProfilesResponse {
+  profiles: Wan2gpProfileInfo[];
+  error: string | null;
+}
+
+export const getWan2gpProfiles = async (
+  modelId: string,
+): Promise<Wan2gpProfilesResponse> => {
+  return (await invoke("wan2gp_get_profiles_command", {
+    modelId,
+  })) as Wan2gpProfilesResponse;
 };

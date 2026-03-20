@@ -546,7 +546,7 @@ export const PromptBoxImage = ({
           </div>
 
           {/* Wan2GP Advanced Settings accordion */}
-          <Wan2gpAdvancedSettings selectedProvider={selectedProvider} hideVideoFields />
+          <Wan2gpAdvancedSettings selectedProvider={selectedProvider} hideVideoFields wan2gpModelId={selectedModel?.tauriId} />
         </div>
       </div>
     </>

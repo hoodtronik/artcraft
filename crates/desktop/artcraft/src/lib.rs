@@ -74,6 +74,7 @@ use crate::services::wan2gp::commands::wan2gp_get_settings_command::wan2gp_get_s
 use crate::services::wan2gp::commands::wan2gp_update_settings_command::wan2gp_update_settings_command;
 use crate::services::wan2gp::commands::wan2gp_get_status_command::wan2gp_get_status_command;
 use crate::services::wan2gp::commands::wan2gp_get_models_command::wan2gp_get_models_command;
+use crate::services::wan2gp::commands::wan2gp_get_profiles_command::wan2gp_get_profiles_command;
 use crate::services::wan2gp::commands::wan2gp_cancel_task_command::wan2gp_cancel_task_command;
 use crate::services::wan2gp::state::wan2gp_settings::Wan2gpSettings;
 use log::error;
@@ -264,6 +265,7 @@ pub fn run() {
     wan2gp_update_settings_command,
     wan2gp_get_status_command,
     wan2gp_get_models_command,
+    wan2gp_get_profiles_command,
     wan2gp_cancel_task_command,
   ]);
 

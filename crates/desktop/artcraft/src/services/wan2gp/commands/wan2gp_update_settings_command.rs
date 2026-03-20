@@ -12,6 +12,7 @@ pub struct UpdateWan2gpSettingsRequest {
   pub num_inference_steps: Option<u32>,
   pub guidance_scale: Option<f64>,
   pub video_length: Option<u32>,
+  pub profile_params: Option<serde_json::Value>,
 }
 
 #[tauri::command]
@@ -41,6 +42,9 @@ pub async fn wan2gp_update_settings_command(
   }
   if let Some(length) = request.video_length {
     current.video_length = Some(length);
+  }
+  if request.profile_params.is_some() {
+    current.profile_params = request.profile_params;
   }
 
   info!("Wan2GP settings updated: bridge_url={}, model={:?}", current.bridge_url, current.selected_model);

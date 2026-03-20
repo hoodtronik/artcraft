@@ -860,7 +860,7 @@ export const PromptBoxVideo = ({
           </div>
 
           {/* Wan2GP Advanced Settings accordion */}
-          <Wan2gpAdvancedSettings selectedProvider={selectedProvider} />
+          <Wan2gpAdvancedSettings selectedProvider={selectedProvider} wan2gpModelId={selectedModel?.tauriId} />
         </div>
         {selectedModel?.id === "seedance_2p0" && (
           <div className="flex items-start gap-2.5 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-3.5 py-2.5 text-xs text-yellow-200">
