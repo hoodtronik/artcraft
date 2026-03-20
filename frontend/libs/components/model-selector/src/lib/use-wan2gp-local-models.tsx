@@ -6,6 +6,75 @@ import type { PopoverItem } from "@storyteller/ui-popover";
 
 export type LocalModelCategory = "video" | "image";
 
+/** Pretty-print architecture names for section headers */
+const ARCH_DISPLAY_NAMES: Record<string, string> = {
+  "wan2.1": "Wan 2.1",
+  "wan2.2": "Wan 2.2",
+  "ltx_video": "LTX Video",
+  "ltx-video": "LTX Video",
+  "ltx_video_0.9.7": "LTX Video",
+  "hunyuan_video": "Hunyuan Video",
+  "hunyuan-video": "Hunyuan Video",
+  "cogvideox": "CogVideoX",
+  "kandinsky": "Kandinsky",
+  "flux": "Flux",
+  "wan": "Wan",
+};
+
+function getArchDisplayName(arch: string): string {
+  const lower = arch.toLowerCase();
+  if (ARCH_DISPLAY_NAMES[lower]) return ARCH_DISPLAY_NAMES[lower];
+  // Fallback: capitalize first letter
+  return arch.charAt(0).toUpperCase() + arch.slice(1);
+}
+
+/**
+ * Groups PopoverItems by architecture (extracted from description "arch · ...")
+ * and inserts disabled section header items between groups.
+ */
+function groupByArchitecture(
+  items: (Omit<PopoverItem, "selected"> & { _arch?: string })[],
+): Omit<PopoverItem, "selected">[] {
+  if (items.length === 0) return items;
+
+  // Group by arch
+  const groups = new Map<string, Omit<PopoverItem, "selected">[]>();
+  for (const item of items) {
+    const arch = item._arch || "Other";
+    if (!groups.has(arch)) groups.set(arch, []);
+    groups.get(arch)!.push(item);
+  }
+
+  // Sort groups alphabetically by display name
+  const sortedKeys = Array.from(groups.keys()).sort((a, b) =>
+    getArchDisplayName(a).localeCompare(getArchDisplayName(b)),
+  );
+
+  // Sort items within each group alphabetically
+  for (const items of groups.values()) {
+    items.sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  // Flatten with section headers
+  const result: Omit<PopoverItem, "selected">[] = [];
+  for (let i = 0; i < sortedKeys.length; i++) {
+    const arch = sortedKeys[i];
+    const groupItems = groups.get(arch)!;
+    const displayName = getArchDisplayName(arch);
+
+    // Section header (disabled, non-clickable)
+    result.push({
+      label: `── ${displayName} ──`,
+      disabled: true,
+      divider: i > 0,
+    });
+
+    result.push(...groupItems);
+  }
+
+  return result;
+}
+
 /**
  * Hook that fetches available models from the Wan2GP bridge API.
  * Returns them as PopoverItem[] ready for the ClassyModelSelector.
@@ -78,6 +147,7 @@ export function useWan2gpLocalModels(category: LocalModelCategory = "video"): {
                 description: `${m.architecture} · Local GPU`,
                 model: model,
                 modelConfig: model.toLegacyModelConfig(),
+                _arch: m.architecture,
               };
             }
           );
@@ -107,12 +177,15 @@ export function useWan2gpLocalModels(category: LocalModelCategory = "video"): {
                 description: `${m.architecture} · Local GPU`,
                 model: model,
                 modelConfig: model.toLegacyModelConfig(),
+                _arch: m.architecture,
               };
             }
           );
         }
 
-        setModels(modelItems);
+        // Group by architecture and insert section headers
+        const grouped = groupByArchitecture(modelItems);
+        setModels(grouped);
       } catch (e: any) {
         if (!cancelled) {
           setError(e?.message || "Failed to fetch Wan2GP models");
