@@ -6,65 +6,73 @@ import type { PopoverItem } from "@storyteller/ui-popover";
 
 export type LocalModelCategory = "video" | "image";
 
-/** Pretty-print architecture names for section headers */
-const ARCH_DISPLAY_NAMES: Record<string, string> = {
-  "wan2.1": "Wan 2.1",
-  "wan2.2": "Wan 2.2",
-  "ltx_video": "LTX Video",
-  "ltx-video": "LTX Video",
-  "ltx_video_0.9.7": "LTX Video",
-  "hunyuan_video": "Hunyuan Video",
-  "hunyuan-video": "Hunyuan Video",
-  "cogvideox": "CogVideoX",
-  "kandinsky": "Kandinsky",
-  "flux": "Flux",
-  "wan": "Wan",
-};
+/**
+ * Extract the model family from a model name.
+ * e.g. "Wan2.1 Alpha v1.0 14B" → "Wan 2.1"
+ *      "Wan2.2 Animate 14B" → "Wan 2.2"
+ *      "Hunyuan Video 1.5 Upsampler 1080p 8B" → "Hunyuan Video"
+ *      "LTX-2 Something" → "LTX"
+ */
+const FAMILY_PATTERNS: [RegExp, string][] = [
+  [/^Wan\s*2\.1\b/i, "Wan 2.1"],
+  [/^Wan\s*2\.2\b/i, "Wan 2.2"],
+  [/^Hunyuan\s*Video/i, "Hunyuan Video"],
+  [/^LTX/i, "LTX Video"],
+  [/^CogVideo/i, "CogVideoX"],
+  [/^Kandinsky/i, "Kandinsky"],
+  [/^Flux/i, "Flux"],
+];
 
-function getArchDisplayName(arch: string): string {
-  const lower = arch.toLowerCase();
-  if (ARCH_DISPLAY_NAMES[lower]) return ARCH_DISPLAY_NAMES[lower];
-  // Fallback: capitalize first letter
-  return arch.charAt(0).toUpperCase() + arch.slice(1);
+function getModelFamily(name: string): string {
+  for (const [pattern, family] of FAMILY_PATTERNS) {
+    if (pattern.test(name)) return family;
+  }
+  return "Other";
 }
 
 /**
- * Groups PopoverItems by architecture (extracted from description "arch · ...")
+ * Groups PopoverItems by model family (extracted from model name)
  * and inserts disabled section header items between groups.
  */
-function groupByArchitecture(
-  items: (Omit<PopoverItem, "selected"> & { _arch?: string })[],
+function groupByFamily(
+  items: Omit<PopoverItem, "selected">[],
 ): Omit<PopoverItem, "selected">[] {
   if (items.length === 0) return items;
 
-  // Group by arch
+  // Group by family
   const groups = new Map<string, Omit<PopoverItem, "selected">[]>();
   for (const item of items) {
-    const arch = item._arch || "Other";
-    if (!groups.has(arch)) groups.set(arch, []);
-    groups.get(arch)!.push(item);
+    const family = getModelFamily(item.label);
+    if (!groups.has(family)) groups.set(family, []);
+    groups.get(family)!.push(item);
   }
 
-  // Sort groups alphabetically by display name
+  // If only one group, skip headers
+  if (groups.size <= 1) {
+    const all = Array.from(groups.values()).flat();
+    all.sort((a, b) => a.label.localeCompare(b.label));
+    return all;
+  }
+
+  // Sort groups alphabetically
   const sortedKeys = Array.from(groups.keys()).sort((a, b) =>
-    getArchDisplayName(a).localeCompare(getArchDisplayName(b)),
+    a.localeCompare(b),
   );
 
   // Sort items within each group alphabetically
-  for (const items of groups.values()) {
-    items.sort((a, b) => a.label.localeCompare(b.label));
+  for (const groupItems of groups.values()) {
+    groupItems.sort((a, b) => a.label.localeCompare(b.label));
   }
 
   // Flatten with section headers
   const result: Omit<PopoverItem, "selected">[] = [];
   for (let i = 0; i < sortedKeys.length; i++) {
-    const arch = sortedKeys[i];
-    const groupItems = groups.get(arch)!;
-    const displayName = getArchDisplayName(arch);
+    const family = sortedKeys[i];
+    const groupItems = groups.get(family)!;
 
     // Section header (disabled, non-clickable)
     result.push({
-      label: `── ${displayName} ──`,
+      label: family,
       disabled: true,
       divider: i > 0,
     });
@@ -147,7 +155,6 @@ export function useWan2gpLocalModels(category: LocalModelCategory = "video"): {
                 description: `${m.architecture} · Local GPU`,
                 model: model,
                 modelConfig: model.toLegacyModelConfig(),
-                _arch: m.architecture,
               };
             }
           );
@@ -177,14 +184,13 @@ export function useWan2gpLocalModels(category: LocalModelCategory = "video"): {
                 description: `${m.architecture} · Local GPU`,
                 model: model,
                 modelConfig: model.toLegacyModelConfig(),
-                _arch: m.architecture,
               };
             }
           );
         }
 
-        // Group by architecture and insert section headers
-        const grouped = groupByArchitecture(modelItems);
+        // Group by model family and insert section headers
+        const grouped = groupByFamily(modelItems);
         setModels(grouped);
       } catch (e: any) {
         if (!cancelled) {
