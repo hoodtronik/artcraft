@@ -67,6 +67,12 @@ Runway (via website account), Luma (via website account).
 We're potentially interested in adding other aggregators for those who already have subscriptions and credits at 
 those providers, for example: OpenArt, FreePik, etc.
 
+> **Note on cloud cost features:** The cloud provider cost-tracking UI (credits, cost calculator, etc.) is deeply
+> integrated into the app architecture and cannot be cleanly removed without breaking things. However, **you don't
+> have to use any cloud providers**. ArtCraft supports fully local, free generation via
+> [Wan2GP](https://github.com/deepbeepmeep/Wan2GP) — just install it alongside ArtCraft and the bridge plugin
+> handles the rest. No API keys, no credits, no cloud costs required.
+
 ## Downloads
 
 - [Visit our website for the stable Windows and MacOS releases](https://getartcraft.com/)
