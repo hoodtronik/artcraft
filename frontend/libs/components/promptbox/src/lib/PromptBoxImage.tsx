@@ -24,6 +24,7 @@ import { gtagEvent } from "@storyteller/google-analytics";
 import { twMerge } from "tailwind-merge";
 import { ImagePromptRow } from "./ImagePromptRow";
 import { GenerationProvider } from "@storyteller/api-enums";
+import { Wan2gpAdvancedSettings } from "./Wan2gpAdvancedSettings";
 import { AspectRatioPicker } from "./common/AspectRatioPicker";
 import { AspectRatioIcon } from "./common/AspectRatioIcon";
 import { GenerationCountPicker } from "./common/GenerationCountPicker";
@@ -543,6 +544,9 @@ export const PromptBoxImage = ({
               </GenerateButton>
             </div>
           </div>
+
+          {/* Wan2GP Advanced Settings accordion */}
+          <Wan2gpAdvancedSettings selectedProvider={selectedProvider} hideVideoFields />
         </div>
       </div>
     </>

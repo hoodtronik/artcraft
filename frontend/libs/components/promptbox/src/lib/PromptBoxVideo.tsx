@@ -33,6 +33,7 @@ import { AspectRatioIcon } from "./common/AspectRatioIcon";
 import { twMerge } from "tailwind-merge";
 import { toast } from "@storyteller/ui-toaster";
 import { GenerationProvider } from "@storyteller/api-enums";
+import { Wan2gpAdvancedSettings } from "./Wan2gpAdvancedSettings";
 
 type GROK_ASPECT_RATIO = "landscape" | "portrait" | "square";
 
@@ -857,6 +858,9 @@ export const PromptBoxVideo = ({
               </Tooltip>
             </div>
           </div>
+
+          {/* Wan2GP Advanced Settings accordion */}
+          <Wan2gpAdvancedSettings selectedProvider={selectedProvider} />
         </div>
         {selectedModel?.id === "seedance_2p0" && (
           <div className="flex items-start gap-2.5 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-3.5 py-2.5 text-xs text-yellow-200">
