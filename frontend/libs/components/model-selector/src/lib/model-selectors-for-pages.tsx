@@ -9,7 +9,6 @@ import {
   SPLAT_MODELS,
 } from "@storyteller/model-list";
 import { ModelTag } from "@storyteller/model-list";
-import { GenerationProvider } from "@storyteller/api-enums";
 
 export type ModelList = Omit<PopoverItem, "selected">[];
 
@@ -38,11 +37,7 @@ const buildItems = (
  * access to the object directly.
  */
 
-// ── Cloud provider filter ───────────────────────────────────────────
-// Only applied to VIDEO models where a local Wan2GP model exists.
-// IMAGE models are left unfiltered for now (no local image alternative yet).
-const isLocalModel = (m: Model): boolean =>
-  m.getProviders().includes(GenerationProvider.Wan2gp);
+
 
 export const TEXT_TO_IMAGE_PAGE_MODEL_LIST: ModelList =
   buildItems(
@@ -110,7 +105,6 @@ export const IMAGE_TO_VIDEO_PAGE_MODEL_LIST: ModelList =
     (function (): Model[] {
       const set: Set<Model> = new Set();
       VIDEO_MODELS
-        .filter((m) => isLocalModel(m))
         .forEach((m) => set.add(m));
       const list = Array.from(set);
       list.sort((a, b) => a.selectorName?.localeCompare(b.selectorName));
